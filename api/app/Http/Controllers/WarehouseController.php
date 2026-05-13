@@ -1,18 +1,19 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
 use App\Data\Warehouse\StoreWarehouseData;
 use App\Data\Warehouse\UpdateWarehouseData;
 use App\Http\Resources\WarehouseResource;
 use App\Models\Warehouse;
-use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
-class WarehouseController extends Controller
+final class WarehouseController extends Controller
 {
     /**
      * Display a paginated listing of warehouses for the current tenant.

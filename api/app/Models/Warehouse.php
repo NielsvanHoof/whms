@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToTenant;
@@ -10,8 +12,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(["tenant_id", "name", "code"])]
-class Warehouse extends Model
+#[Fillable(['tenant_id', 'name', 'code'])]
+final class Warehouse extends Model
 {
     use BelongsToTenant;
 

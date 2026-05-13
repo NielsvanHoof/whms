@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Tests\Feature;
 
 use App\Models\Product;
@@ -7,11 +9,20 @@ use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
+use Tests\Concerns\InteractsWithRbac;
 use Tests\TestCase;
 
-class ProductApiTest extends TestCase
+final class ProductApiTest extends TestCase
 {
+    use InteractsWithRbac;
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->seedRbac();
+    }
 
     public function test_products_require_authentication(): void
     {
@@ -24,6 +35,7 @@ class ProductApiTest extends TestCase
     {
         $tenant = Tenant::factory()->create();
         $user = User::factory()->create(['tenant_id' => $tenant->id]);
+        $this->assignRole($user, 'manager');
 
         Sanctum::actingAs($user);
 
@@ -48,6 +60,7 @@ class ProductApiTest extends TestCase
     {
         $tenant = Tenant::factory()->create();
         $user = User::factory()->create(['tenant_id' => $tenant->id]);
+        $this->assignRole($user, 'manager');
         Sanctum::actingAs($user);
 
         $this->postJson('/api/v1/products', [
@@ -71,6 +84,7 @@ class ProductApiTest extends TestCase
         $tenantA = Tenant::factory()->create();
         $tenantB = Tenant::factory()->create();
         $userA = User::factory()->create(['tenant_id' => $tenantA->id]);
+        $this->assignRole($userA, 'manager');
 
         $productB = Product::withoutGlobalScopes()->create([
             'tenant_id' => $tenantB->id,
@@ -90,6 +104,7 @@ class ProductApiTest extends TestCase
     {
         $tenant = Tenant::factory()->create();
         $user = User::factory()->create(['tenant_id' => $tenant->id]);
+        $this->assignRole($user, 'manager');
         Sanctum::actingAs($user);
 
         $id = $this->postJson('/api/v1/products', [
@@ -108,5 +123,21 @@ class ProductApiTest extends TestCase
         $this->deleteJson('/api/v1/products/'.$id)->assertNoContent();
 
         $this->getJson('/api/v1/products/'.$id)->assertNotFound();
+    }
+
+    public function test_viewer_cannot_create_product(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $user = User::factory()->create(['tenant_id' => $tenant->id]);
+        $this->assignRole($user, 'viewer');
+
+        Sanctum::actingAs($user);
+
+        $this->postJson('/api/v1/products', [
+            'sku' => 'SKU-DENIED',
+            'name' => 'Denied Product',
+            'unit' => 'each',
+            'is_active' => true,
+        ])->assertForbidden();
     }
 }

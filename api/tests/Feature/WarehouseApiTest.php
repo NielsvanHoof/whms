@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Tests\Feature;
 
 use App\Models\Tenant;
@@ -8,11 +10,20 @@ use App\Models\Warehouse;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Laravel\Sanctum\Sanctum;
+use Tests\Concerns\InteractsWithRbac;
 use Tests\TestCase;
 
-class WarehouseApiTest extends TestCase
+final class WarehouseApiTest extends TestCase
 {
+    use InteractsWithRbac;
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->seedRbac();
+    }
 
     public function test_warehouses_require_authentication(): void
     {
@@ -38,6 +49,7 @@ class WarehouseApiTest extends TestCase
             'tenant_id' => $tenant->id,
             'password' => Hash::make('password'),
         ]);
+        $this->assignRole($user, 'manager');
 
         Sanctum::actingAs($user);
 
@@ -64,6 +76,7 @@ class WarehouseApiTest extends TestCase
     {
         $tenant = Tenant::factory()->create();
         $user = User::factory()->create(['tenant_id' => $tenant->id]);
+        $this->assignRole($user, 'manager');
 
         Sanctum::actingAs($user);
 
@@ -99,6 +112,7 @@ class WarehouseApiTest extends TestCase
     {
         $tenant = Tenant::factory()->create();
         $user = User::factory()->create(['tenant_id' => $tenant->id]);
+        $this->assignRole($user, 'manager');
 
         Sanctum::actingAs($user);
 
@@ -111,6 +125,7 @@ class WarehouseApiTest extends TestCase
     {
         $tenant = Tenant::factory()->create();
         $user = User::factory()->create(['tenant_id' => $tenant->id]);
+        $this->assignRole($user, 'manager');
 
         Sanctum::actingAs($user);
 
@@ -131,6 +146,7 @@ class WarehouseApiTest extends TestCase
         $tenantA = Tenant::factory()->create();
         $tenantB = Tenant::factory()->create();
         $userA = User::factory()->create(['tenant_id' => $tenantA->id]);
+        $this->assignRole($userA, 'manager');
 
         $warehouseB = Warehouse::withoutGlobalScopes()->create([
             'tenant_id' => $tenantB->id,
@@ -148,6 +164,7 @@ class WarehouseApiTest extends TestCase
     {
         $tenant = Tenant::factory()->create();
         $user = User::factory()->create(['tenant_id' => $tenant->id]);
+        $this->assignRole($user, 'manager');
 
         Sanctum::actingAs($user);
 
@@ -167,5 +184,19 @@ class WarehouseApiTest extends TestCase
 
         $this->getJson('/api/v1/warehouses/'.$id)
             ->assertNotFound();
+    }
+
+    public function test_viewer_cannot_create_warehouse(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $user = User::factory()->create(['tenant_id' => $tenant->id]);
+        $this->assignRole($user, 'viewer');
+
+        Sanctum::actingAs($user);
+
+        $this->postJson('/api/v1/warehouses', [
+            'name' => 'Denied Warehouse',
+            'code' => 'DENIED',
+        ])->assertForbidden();
     }
 }

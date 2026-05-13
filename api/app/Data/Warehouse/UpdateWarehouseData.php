@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Data\Warehouse;
 
 use App\Models\Tenant;
@@ -8,7 +10,7 @@ use Spatie\LaravelData\Data;
 use Spatie\LaravelData\Optional;
 use Spatie\LaravelData\Support\Validation\ValidationContext;
 
-class UpdateWarehouseData extends Data
+final class UpdateWarehouseData extends Data
 {
     public function __construct(
         public string|Optional $name,
@@ -17,7 +19,7 @@ class UpdateWarehouseData extends Data
     ) {}
 
     /**
-     * @return array<string, array<int, (\Closure(string):void)|string>>
+     * @return array<string, array<int, mixed>>
      */
     public static function rules(?ValidationContext $context = null): array
     {

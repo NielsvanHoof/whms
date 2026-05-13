@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
 use App\Data\Product\StoreProductData;
@@ -11,24 +13,24 @@ use Illuminate\Http\Response;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
-class ProductController extends Controller
+final class ProductController extends Controller
 {
     /**
      * Display a paginated listing of products for the current tenant.
      */
     public function index(): AnonymousResourceCollection
     {
-        $this->authorize("viewAny", Product::class);
+        $this->authorize('viewAny', Product::class);
 
         $products = QueryBuilder::for(Product::class)
             ->allowedFilters(
-                AllowedFilter::partial("name"),
-                AllowedFilter::exact("sku"),
-                AllowedFilter::exact("unit"),
-                AllowedFilter::exact("is_active")
+                AllowedFilter::partial('name'),
+                AllowedFilter::exact('sku'),
+                AllowedFilter::exact('unit'),
+                AllowedFilter::exact('is_active')
             )
-            ->allowedSorts("id", "sku", "name", "unit", "is_active", "created_at")
-            ->defaultSort("-id")
+            ->allowedSorts('id', 'sku', 'name', 'unit', 'is_active', 'created_at')
+            ->defaultSort('-id')
             ->paginate(15)
             ->withQueryString();
 
@@ -40,7 +42,7 @@ class ProductController extends Controller
      */
     public function store(StoreProductData $data): ProductResource
     {
-        $this->authorize("create", Product::class);
+        $this->authorize('create', Product::class);
 
         $product = Product::query()->create($data->toModelAttributes());
 
@@ -52,7 +54,7 @@ class ProductController extends Controller
      */
     public function show(Product $product): ProductResource
     {
-        $this->authorize("view", $product);
+        $this->authorize('view', $product);
 
         return new ProductResource($product);
     }
@@ -62,7 +64,7 @@ class ProductController extends Controller
      */
     public function update(UpdateProductData $data, Product $product): ProductResource
     {
-        $this->authorize("update", $product);
+        $this->authorize('update', $product);
 
         $product->update($data->toModelAttributes());
 
@@ -74,7 +76,7 @@ class ProductController extends Controller
      */
     public function destroy(Product $product): Response
     {
-        $this->authorize("delete", $product);
+        $this->authorize('delete', $product);
         $product->delete();
 
         return response()->noContent();

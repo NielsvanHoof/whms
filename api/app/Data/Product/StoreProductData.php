@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Data\Product;
 
 use App\Models\Tenant;
@@ -7,7 +9,7 @@ use Illuminate\Validation\Rule;
 use Spatie\LaravelData\Data;
 use Spatie\LaravelData\Support\Validation\ValidationContext;
 
-class StoreProductData extends Data
+final class StoreProductData extends Data
 {
     public function __construct(
         public string $sku,
@@ -17,24 +19,24 @@ class StoreProductData extends Data
     ) {}
 
     /**
-     * @return array<string, array<int, (\Closure(string):void)|string>>
+     * @return array<string, array<int, mixed>>
      */
     public static function rules(?ValidationContext $context = null): array
     {
         $tenantId = Tenant::current()?->getKey();
 
         return [
-            "sku" => [
-                "required",
-                "string",
-                "max:64",
-                Rule::unique("products", "sku")->where(
-                    fn ($query) => $query->where("tenant_id", $tenantId)
+            'sku' => [
+                'required',
+                'string',
+                'max:64',
+                Rule::unique('products', 'sku')->where(
+                    fn ($query) => $query->where('tenant_id', $tenantId)
                 ),
             ],
-            "name" => ["required", "string", "max:255"],
-            "unit" => ["required", "string", "max:32"],
-            "is_active" => ["required", "boolean"],
+            'name' => ['required', 'string', 'max:255'],
+            'unit' => ['required', 'string', 'max:32'],
+            'is_active' => ['required', 'boolean'],
         ];
     }
 
@@ -44,10 +46,10 @@ class StoreProductData extends Data
     public function toModelAttributes(): array
     {
         return [
-            "sku" => $this->sku,
-            "name" => $this->name,
-            "unit" => $this->unit,
-            "is_active" => $this->is_active,
+            'sku' => $this->sku,
+            'name' => $this->name,
+            'unit' => $this->unit,
+            'is_active' => $this->is_active,
         ];
     }
 }

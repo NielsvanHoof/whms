@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Database\Seeders;
 
 use App\Models\Tenant;
@@ -8,8 +10,11 @@ use App\Models\Warehouse;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 
-class DatabaseSeeder extends Seeder
+final class DatabaseSeeder extends Seeder
 {
     use WithoutModelEvents;
 
@@ -18,6 +23,50 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $permissions = [
+            'warehouses.view',
+            'warehouses.manage',
+            'products.view',
+            'products.manage',
+            'locations.view',
+            'locations.manage',
+            'roles.view',
+            'roles.manage',
+        ];
+
+        foreach ($permissions as $permission) {
+            Permission::findOrCreate($permission, 'web');
+        }
+
+        $roles = [
+            'owner' => $permissions,
+            'manager' => $permissions,
+            'operator' => [
+                'warehouses.view',
+                'products.view',
+                'products.manage',
+                'locations.view',
+                'locations.manage',
+            ],
+            'viewer' => [
+                'warehouses.view',
+                'products.view',
+                'locations.view',
+            ],
+        ];
+
+        foreach ($roles as $roleName => $rolePermissions) {
+            $role = Role::findOrCreate($roleName, 'web');
+            $permissionsForRole = Permission::query()
+                ->where('guard_name', 'web')
+                ->whereIn('name', $rolePermissions)
+                ->get();
+
+            $role->syncPermissions($permissionsForRole);
+        }
+
         $tenants = [
             [
                 'tenant' => [
@@ -41,15 +90,17 @@ class DatabaseSeeder extends Seeder
             ],
         ];
 
-        foreach ($tenants as $seedData) {
+        foreach ($tenants as $index => $seedData) {
             $tenant = Tenant::query()->create($seedData['tenant']);
 
-            User::factory()->create([
+            $user = User::factory()->create([
                 'tenant_id' => $tenant->id,
                 'name' => $seedData['user']['name'],
                 'email' => $seedData['user']['email'],
                 'password' => Hash::make('password'),
             ]);
+
+            $user->assignRole($index === 0 ? 'owner' : 'viewer');
 
             Warehouse::factory()
                 ->count(10)

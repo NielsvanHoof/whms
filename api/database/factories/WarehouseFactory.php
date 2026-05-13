@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Database\Factories;
 
 use App\Models\Tenant;
@@ -9,7 +11,7 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 /**
  * @extends Factory<Warehouse>
  */
-class WarehouseFactory extends Factory
+final class WarehouseFactory extends Factory
 {
     protected $model = Warehouse::class;
 
@@ -21,7 +23,7 @@ class WarehouseFactory extends Factory
         return [
             'tenant_id' => Tenant::factory(),
             'name' => fake()->streetName().' Warehouse',
-            'code' => strtoupper(fake()->bothify('WH-####')),
+            'code' => mb_strtoupper(fake()->bothify('WH-####')),
         ];
     }
 }

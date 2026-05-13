@@ -41,6 +41,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/locations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Display a paginated listing of locations for the current tenant */
+        get: operations["locations.index"];
+        put?: never;
+        /** Store a newly created location */
+        post: operations["locations.store"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/locations/{location}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Display the specified location */
+        get: operations["locations.show"];
+        /** Update the specified location */
+        put: operations["locations.update"];
+        post?: never;
+        /** Remove the specified location */
+        delete: operations["locations.destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/auth/login": {
         parameters: {
             query?: never;
@@ -52,6 +89,123 @@ export interface paths {
         put?: never;
         /** Exchange email and password for a Sanctum personal access token */
         post: operations["auth.login"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["auth.me"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Display a paginated listing of products for the current tenant */
+        get: operations["products.index"];
+        put?: never;
+        /** Store a newly created product */
+        post: operations["products.store"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/products/{product}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Display the specified product */
+        get: operations["products.show"];
+        /** Update the specified product */
+        put: operations["products.update"];
+        post?: never;
+        /** Remove the specified product */
+        delete: operations["products.destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/access/roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["roleManagement.roles"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/access/permissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["roleManagement.permissions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/access/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["roleManagement.users"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/access/users/{user}/roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["roleManagement.syncUserRoles"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -99,6 +253,36 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AccessPermissionResource */
+        AccessPermissionResource: {
+            id: number;
+            name: string;
+        };
+        /** AccessRoleResource */
+        AccessRoleResource: {
+            id: number;
+            name: string;
+            permissions: unknown[];
+        };
+        /** AccessUserResource */
+        AccessUserResource: {
+            id: number;
+            tenant_id: number;
+            name: string;
+            email: string;
+            roles: unknown[];
+        };
+        /** LocationResource */
+        LocationResource: {
+            id: number;
+            tenant_id: number;
+            warehouse_id: number;
+            warehouse_code?: string;
+            code: string;
+            type: string;
+            created_at: string;
+            updated_at: string;
+        };
         /** LoginData */
         LoginData: {
             /** Format: email */
@@ -106,10 +290,59 @@ export interface components {
             password: string;
             device_name?: string | null;
         };
+        /** MeResource */
+        MeResource: {
+            user: components["schemas"]["UserResource"];
+            roles: string[];
+            permissions: string[];
+        };
+        /** ProductResource */
+        ProductResource: {
+            id: number;
+            tenant_id: number;
+            sku: string;
+            name: string;
+            unit: string;
+            is_active: boolean;
+            created_at: string;
+            updated_at: string;
+        };
+        /** StoreLocationData */
+        StoreLocationData: {
+            warehouse_id: number;
+            code: string;
+            type: string;
+        };
+        /** StoreProductData */
+        StoreProductData: {
+            sku: string;
+            name: string;
+            unit: string;
+            is_active: boolean;
+        };
         /** StoreWarehouseData */
         StoreWarehouseData: {
             name: string;
             code?: string | null;
+        };
+        /** SyncUserRolesData */
+        SyncUserRolesData: {
+            roles: string[];
+        };
+        /** UpdateLocationData */
+        UpdateLocationData: {
+            warehouse_id?: number;
+            code?: string;
+            type?: string;
+            location_id: number;
+        };
+        /** UpdateProductData */
+        UpdateProductData: {
+            sku?: string;
+            name?: string;
+            unit?: string;
+            is_active?: boolean;
+            product_id: number;
         };
         /** UpdateWarehouseData */
         UpdateWarehouseData: {
@@ -151,8 +384,8 @@ export interface components {
                 };
             };
         };
-        /** @description Authorization error */
-        AuthorizationException: {
+        /** @description Unauthenticated */
+        AuthenticationException: {
             headers: {
                 [name: string]: unknown;
             };
@@ -163,8 +396,8 @@ export interface components {
                 };
             };
         };
-        /** @description Unauthenticated */
-        AuthenticationException: {
+        /** @description Authorization error */
+        AuthorizationException: {
             headers: {
                 [name: string]: unknown;
             };
@@ -195,6 +428,176 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    "locations.index": {
+        parameters: {
+            query?: {
+                "filter[warehouse_id]"?: string;
+                "filter[type]"?: string;
+                "filter[code]"?: string;
+                sort?: ("id" | "-id" | "warehouse_id" | "-warehouse_id" | "code" | "-code" | "type" | "-type" | "created_at" | "-created_at")[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paginated set of `LocationResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["LocationResource"][];
+                        links: {
+                            first: string | null;
+                            last: string | null;
+                            prev: string | null;
+                            next: string | null;
+                        };
+                        meta: {
+                            current_page: number;
+                            from: number | null;
+                            last_page: number;
+                            /** @description Generated paginator links. */
+                            links: {
+                                url: string | null;
+                                label: string;
+                                active: boolean;
+                            }[];
+                            /** @description Base path for paginator generated URLs. */
+                            path: string | null;
+                            /** @description Number of items shown per page. */
+                            per_page: number;
+                            /** @description Number of the last item in the slice. */
+                            to: number | null;
+                            /** @description Total number of items being paginated. */
+                            total: number;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+        };
+    };
+    "locations.store": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description `StoreLocationData` */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StoreLocationData"];
+            };
+        };
+        responses: {
+            /** @description `LocationResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["LocationResource"];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "locations.show": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The location ID */
+                location: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description `LocationResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["LocationResource"];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            404: components["responses"]["ModelNotFoundException"];
+        };
+    };
+    "locations.update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The location ID */
+                location: number;
+            };
+            cookie?: never;
+        };
+        /** @description `UpdateLocationData` */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateLocationData"];
+            };
+        };
+        responses: {
+            /** @description `LocationResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["LocationResource"];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            404: components["responses"]["ModelNotFoundException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "locations.destroy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The location ID */
+                location: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            404: components["responses"]["ModelNotFoundException"];
+        };
+    };
     "auth.login": {
         parameters: {
             query?: never;
@@ -222,6 +625,302 @@ export interface operations {
                     };
                 };
             };
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "auth.me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description `MeResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["MeResource"];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+        };
+    };
+    "products.index": {
+        parameters: {
+            query?: {
+                "filter[name]"?: string;
+                "filter[sku]"?: string;
+                "filter[unit]"?: string;
+                "filter[is_active]"?: string;
+                sort?: ("id" | "-id" | "sku" | "-sku" | "name" | "-name" | "unit" | "-unit" | "is_active" | "-is_active" | "created_at" | "-created_at")[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paginated set of `ProductResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ProductResource"][];
+                        links: {
+                            first: string | null;
+                            last: string | null;
+                            prev: string | null;
+                            next: string | null;
+                        };
+                        meta: {
+                            current_page: number;
+                            from: number | null;
+                            last_page: number;
+                            /** @description Generated paginator links. */
+                            links: {
+                                url: string | null;
+                                label: string;
+                                active: boolean;
+                            }[];
+                            /** @description Base path for paginator generated URLs. */
+                            path: string | null;
+                            /** @description Number of items shown per page. */
+                            per_page: number;
+                            /** @description Number of the last item in the slice. */
+                            to: number | null;
+                            /** @description Total number of items being paginated. */
+                            total: number;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+        };
+    };
+    "products.store": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description `StoreProductData` */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StoreProductData"];
+            };
+        };
+        responses: {
+            /** @description `ProductResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ProductResource"];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "products.show": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The product ID */
+                product: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description `ProductResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ProductResource"];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            404: components["responses"]["ModelNotFoundException"];
+        };
+    };
+    "products.update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The product ID */
+                product: number;
+            };
+            cookie?: never;
+        };
+        /** @description `UpdateProductData` */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateProductData"];
+            };
+        };
+        responses: {
+            /** @description `ProductResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ProductResource"];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            404: components["responses"]["ModelNotFoundException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "products.destroy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The product ID */
+                product: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            404: components["responses"]["ModelNotFoundException"];
+        };
+    };
+    "roleManagement.roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Array of `AccessRoleResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["AccessRoleResource"][];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+        };
+    };
+    "roleManagement.permissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Array of `AccessPermissionResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["AccessPermissionResource"][];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+        };
+    };
+    "roleManagement.users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Array of `AccessUserResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["AccessUserResource"][];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+        };
+    };
+    "roleManagement.syncUserRoles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The user ID */
+                user: number;
+            };
+            cookie?: never;
+        };
+        /** @description `SyncUserRolesData` */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SyncUserRolesData"];
+            };
+        };
+        responses: {
+            /** @description `AccessUserResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["AccessUserResource"];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            404: components["responses"]["ModelNotFoundException"];
             422: components["responses"]["ValidationException"];
         };
     };

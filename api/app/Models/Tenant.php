@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use Database\Factories\TenantFactory;
@@ -14,8 +16,8 @@ use Spatie\Multitenancy\Models\Tenant as SpatieTenant;
  * We do not use a separate physical database per tenant. Spatie still expects
  * {@see getDatabaseName()} for its contract; we return the default connection database name.
  */
-#[Fillable(["name", "slug"])]
-class Tenant extends SpatieTenant
+#[Fillable(['name', 'slug'])]
+final class Tenant extends SpatieTenant
 {
     /** @use HasFactory<TenantFactory> */
     use HasFactory;
@@ -25,10 +27,10 @@ class Tenant extends SpatieTenant
      */
     public function getDatabaseName(): string
     {
-        $connection = config("database.default");
+        $connection = config('database.default');
         $database = config("database.connections.{$connection}.database");
 
-        return $database !== null ? (string) $database : "";
+        return $database !== null ? (string) $database : '';
     }
 
     /**

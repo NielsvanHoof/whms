@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Database\Factories;
 
 use App\Models\Location;
@@ -10,7 +12,7 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 /**
  * @extends Factory<Location>
  */
-class LocationFactory extends Factory
+final class LocationFactory extends Factory
 {
     protected $model = Location::class;
 
@@ -22,10 +24,10 @@ class LocationFactory extends Factory
         $tenant = Tenant::factory()->create();
 
         return [
-            "tenant_id" => $tenant->id,
-            "warehouse_id" => Warehouse::factory()->create(["tenant_id" => $tenant->id])->id,
-            "code" => strtoupper(fake()->bothify("BIN-###")),
-            "type" => fake()->randomElement(["storage", "staging", "pick"]),
+            'tenant_id' => $tenant->id,
+            'warehouse_id' => Warehouse::factory()->create(['tenant_id' => $tenant->id])->id,
+            'code' => mb_strtoupper(fake()->bothify('BIN-###')),
+            'type' => fake()->randomElement(['storage', 'staging', 'pick']),
         ];
     }
 }

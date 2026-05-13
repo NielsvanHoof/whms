@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Tests\Feature;
 
 use App\Models\Location;
@@ -8,11 +10,20 @@ use App\Models\User;
 use App\Models\Warehouse;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
+use Tests\Concerns\InteractsWithRbac;
 use Tests\TestCase;
 
-class LocationApiTest extends TestCase
+final class LocationApiTest extends TestCase
 {
+    use InteractsWithRbac;
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->seedRbac();
+    }
 
     public function test_locations_require_authentication(): void
     {
@@ -26,6 +37,7 @@ class LocationApiTest extends TestCase
         $tenant = Tenant::factory()->create();
         $warehouse = Warehouse::factory()->create(['tenant_id' => $tenant->id]);
         $user = User::factory()->create(['tenant_id' => $tenant->id]);
+        $this->assignRole($user, 'manager');
 
         Sanctum::actingAs($user);
 
@@ -51,6 +63,7 @@ class LocationApiTest extends TestCase
         $tenantB = Tenant::factory()->create();
         $warehouseB = Warehouse::factory()->create(['tenant_id' => $tenantB->id]);
         $userA = User::factory()->create(['tenant_id' => $tenantA->id]);
+        $this->assignRole($userA, 'manager');
 
         Sanctum::actingAs($userA);
 
@@ -67,6 +80,7 @@ class LocationApiTest extends TestCase
         $tenant = Tenant::factory()->create();
         $warehouse = Warehouse::factory()->create(['tenant_id' => $tenant->id]);
         $user = User::factory()->create(['tenant_id' => $tenant->id]);
+        $this->assignRole($user, 'manager');
 
         Sanctum::actingAs($user);
 
@@ -97,6 +111,7 @@ class LocationApiTest extends TestCase
         ]);
 
         $userA = User::factory()->create(['tenant_id' => $tenantA->id]);
+        $this->assignRole($userA, 'manager');
         Sanctum::actingAs($userA);
 
         $this->getJson('/api/v1/locations/'.$locationB->id)
@@ -108,6 +123,7 @@ class LocationApiTest extends TestCase
         $tenant = Tenant::factory()->create();
         $warehouse = Warehouse::factory()->create(['tenant_id' => $tenant->id]);
         $user = User::factory()->create(['tenant_id' => $tenant->id]);
+        $this->assignRole($user, 'manager');
 
         Sanctum::actingAs($user);
 
@@ -127,5 +143,21 @@ class LocationApiTest extends TestCase
         $this->deleteJson('/api/v1/locations/'.$id)->assertNoContent();
 
         $this->getJson('/api/v1/locations/'.$id)->assertNotFound();
+    }
+
+    public function test_viewer_cannot_create_location(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $warehouse = Warehouse::factory()->create(['tenant_id' => $tenant->id]);
+        $user = User::factory()->create(['tenant_id' => $tenant->id]);
+        $this->assignRole($user, 'viewer');
+
+        Sanctum::actingAs($user);
+
+        $this->postJson('/api/v1/locations', [
+            'warehouse_id' => $warehouse->id,
+            'code' => 'BIN-DENIED',
+            'type' => 'storage',
+        ])->assertForbidden();
     }
 }

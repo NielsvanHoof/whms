@@ -1,0 +1,38 @@
+# Dependencies and build outputs (rebuilt inside the image)
+/node_modules
+/vendor
+/public/build
+/public/hot
+
+# Local and VCS
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+auth.json
+.phpunit.result.cache
+.phpunit.cache
+
+# IDE / tooling
+/.cursor
+/.codex
+/.idea
+/.vscode
+/.zed
+.phpactor.json
+
+# Tests and static analysis (not needed in production image)
+/tests
+phpunit.xml
+phpstan.neon
+pint.json
+phpstan-baseline.neon
+
+# Logs (avoid shipping local log files into the image)
+*.log
+/storage/logs/*.log
+
+# Documentation (not required at runtime)
+*.md
+!README.md

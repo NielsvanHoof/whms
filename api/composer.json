@@ -9,7 +9,7 @@
     ],
     "license": "MIT",
     "require": {
-        "php": "^8.3",
+        "php": "^8.4",
         "dedoc/scramble": "^0.13.22",
         "dedoc/scramble-pro": "^0.9.1",
         "laravel/framework": "^13.0",
@@ -17,6 +17,7 @@
         "laravel/tinker": "^3.0",
         "spatie/laravel-data": "^4.22",
         "spatie/laravel-multitenancy": "^4.1",
+        "spatie/laravel-permission": "^7.4",
         "spatie/laravel-query-builder": "^7.3"
     },
     "require-dev": {

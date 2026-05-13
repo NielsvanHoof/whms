@@ -1,0 +1,57 @@
+# Reference production-style stack for the Laravel API (`api/` directory).
+# Build requires Composer credentials for private packages (Dedoc Satis), e.g.:
+#   COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker compose -f docker-compose.prod.yml build --secret id=composer_auth,src=$HOME/.config/composer/auth.json
+#
+# Then run (set APP_KEY and database env vars for your environment):
+#   docker compose -f docker-compose.prod.yml up -d
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      secrets:
+        - composer_auth
+    ports:
+      - "${API_PUBLISH_PORT:-8080}:80"
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_URL: ${APP_URL:-http://localhost:8080}
+      APP_KEY: ${APP_KEY:?Set APP_KEY in your shell or a .env file next to this compose file}
+      LOG_CHANNEL: stderr
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      DB_CONNECTION: ${DB_CONNECTION:-mysql}
+      DB_HOST: ${DB_HOST:-mysql}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_DATABASE: ${DB_DATABASE:-warehouse}
+      DB_USERNAME: ${DB_USERNAME:-warehouse}
+      DB_PASSWORD: ${DB_PASSWORD:-warehouse}
+      CACHE_STORE: ${CACHE_STORE:-database}
+      SESSION_DRIVER: ${SESSION_DRIVER:-database}
+      QUEUE_CONNECTION: ${QUEUE_CONNECTION:-database}
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-warehouse}
+      MYSQL_USER: ${DB_USERNAME:-warehouse}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-warehouse}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+secrets:
+  composer_auth:
+    file: ${COMPOSER_AUTH_FILE:-./auth.json}
+
+volumes:
+  mysql_data: {}

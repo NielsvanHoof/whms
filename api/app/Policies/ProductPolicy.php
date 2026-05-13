@@ -1,34 +1,39 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Policies;
 
 use App\Models\Product;
 use App\Models\User;
 
-class ProductPolicy
+final class ProductPolicy
 {
     public function viewAny(User $user): bool
     {
-        return true;
+        return $user->can('products.view');
     }
 
     public function view(User $user, Product $product): bool
     {
-        return (int) $user->tenant_id === (int) $product->tenant_id;
+        return $user->can('products.view')
+            && (int) $user->tenant_id === (int) $product->tenant_id;
     }
 
     public function create(User $user): bool
     {
-        return true;
+        return $user->can('products.manage');
     }
 
     public function update(User $user, Product $product): bool
     {
-        return (int) $user->tenant_id === (int) $product->tenant_id;
+        return $user->can('products.manage')
+            && (int) $user->tenant_id === (int) $product->tenant_id;
     }
 
     public function delete(User $user, Product $product): bool
     {
-        return (int) $user->tenant_id === (int) $product->tenant_id;
+        return $user->can('products.manage')
+            && (int) $user->tenant_id === (int) $product->tenant_id;
     }
 }

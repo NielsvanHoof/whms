@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Data\Warehouse;
 
 use App\Models\Tenant;
@@ -7,7 +9,7 @@ use Illuminate\Validation\Rule;
 use Spatie\LaravelData\Data;
 use Spatie\LaravelData\Support\Validation\ValidationContext;
 
-class StoreWarehouseData extends Data
+final class StoreWarehouseData extends Data
 {
     public function __construct(
         public string $name,
@@ -15,7 +17,7 @@ class StoreWarehouseData extends Data
     ) {}
 
     /**
-     * @return array<string, array<int, (\Closure(string):void)|string>>
+     * @return array<string, array<int, mixed>>
      */
     public static function rules(?ValidationContext $context = null): array
     {

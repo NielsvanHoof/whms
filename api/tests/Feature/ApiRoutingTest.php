@@ -1,10 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Tests\Feature;
 
 use Tests\TestCase;
 
-class ApiRoutingTest extends TestCase
+final class ApiRoutingTest extends TestCase
 {
     /**
      * Versioned API health endpoint is reachable under /api/v1.

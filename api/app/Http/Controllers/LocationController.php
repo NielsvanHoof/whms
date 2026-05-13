@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
 use App\Data\Location\StoreLocationData;
@@ -11,23 +13,23 @@ use Illuminate\Http\Response;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
-class LocationController extends Controller
+final class LocationController extends Controller
 {
     /**
      * Display a paginated listing of locations for the current tenant.
      */
     public function index(): AnonymousResourceCollection
     {
-        $this->authorize("viewAny", Location::class);
+        $this->authorize('viewAny', Location::class);
 
         $locations = QueryBuilder::for(Location::class)
             ->allowedFilters(
-                AllowedFilter::exact("warehouse_id"),
-                AllowedFilter::exact("type"),
-                AllowedFilter::partial("code")
+                AllowedFilter::exact('warehouse_id'),
+                AllowedFilter::exact('type'),
+                AllowedFilter::partial('code')
             )
-            ->allowedSorts("id", "warehouse_id", "code", "type", "created_at")
-            ->defaultSort("-id")
+            ->allowedSorts('id', 'warehouse_id', 'code', 'type', 'created_at')
+            ->defaultSort('-id')
             ->paginate(15)
             ->withQueryString();
 
@@ -39,11 +41,11 @@ class LocationController extends Controller
      */
     public function store(StoreLocationData $data): LocationResource
     {
-        $this->authorize("create", Location::class);
+        $this->authorize('create', Location::class);
 
         $location = Location::query()->create($data->toModelAttributes());
 
-        return new LocationResource($location->load("warehouse"));
+        return new LocationResource($location->load('warehouse'));
     }
 
     /**
@@ -51,9 +53,9 @@ class LocationController extends Controller
      */
     public function show(Location $location): LocationResource
     {
-        $this->authorize("view", $location);
+        $this->authorize('view', $location);
 
-        return new LocationResource($location->load("warehouse"));
+        return new LocationResource($location->load('warehouse'));
     }
 
     /**
@@ -61,11 +63,11 @@ class LocationController extends Controller
      */
     public function update(UpdateLocationData $data, Location $location): LocationResource
     {
-        $this->authorize("update", $location);
+        $this->authorize('update', $location);
 
         $location->update($data->toModelAttributes());
 
-        return new LocationResource($location->load("warehouse"));
+        return new LocationResource($location->load('warehouse'));
     }
 
     /**
@@ -73,7 +75,7 @@ class LocationController extends Controller
      */
     public function destroy(Location $location): Response
     {
-        $this->authorize("delete", $location);
+        $this->authorize('delete', $location);
         $location->delete();
 
         return response()->noContent();
