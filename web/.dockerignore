@@ -1,0 +1,27 @@
+# Dependencies and build output
+node_modules
+.next
+out
+
+# Env and local
+.env
+.env.*
+!.env.example
+
+# VCS and IDE
+.git
+.gitignore
+.cursor
+.agents
+.vscode
+.idea
+
+# Misc
+*.md
+!README.md
+npm-debug.log*
+.DS_Store
+.vercel
+coverage
+*.tsbuildinfo
+next-env.d.ts

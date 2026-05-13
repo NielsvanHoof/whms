@@ -1,0 +1,17 @@
+# Reference stack for the Next.js app (`web/`). Build with an API URL baked into client code when needed:
+#   docker compose -f docker-compose.prod.yml build --build-arg NEXT_PUBLIC_API_URL=https://api.example.com/
+#
+# Run:
+#   docker compose -f docker-compose.prod.yml up -d
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-}
+    ports:
+      - "${WEB_PUBLISH_PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
