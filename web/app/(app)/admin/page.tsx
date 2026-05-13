@@ -1,3 +1,5 @@
+"use client";
+
 import { ShieldCheckIcon, UserCogIcon } from "lucide-react";
 import Link from "next/link";
 import { ErrorState } from "@/components/query/error-state";
