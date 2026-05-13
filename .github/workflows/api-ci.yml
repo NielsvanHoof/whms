@@ -1,3 +1,14 @@
+# Dedoc Scramble Pro: `composer.lock` lists a Satis zip *and* a GitHub git source. If the Satis
+# download fails (wrong/missing http-basic), Composer falls back to cloning dedoc/scramble-pro,
+# which needs a GitHub token with access to that private repo.
+#
+# Repository secrets:
+# - COMPOSER_AUTH: JSON for Composer (http-basic for satis.dedoc.co). Optionally include
+#   "github-oauth": {"github.com": "ghp_..."} in the same JSON (see Composer COMPOSER_AUTH docs).
+# - COMPOSER_GITHUB_TOKEN (optional): a fine-grained or classic PAT; we run
+#   `composer config --global github-oauth.github.com` so git fallback works without embedding
+#   the token inside COMPOSER_AUTH.
+
 name: API CI
 
 on:
@@ -45,14 +56,20 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ steps.composer-cache.outputs.dir }}
-          key: ${{ runner.os }}-composer-${{ hashFiles('api/composer.lock') }}
+          key: ${{ runner.os }}-composer-v2-${{ hashFiles('api/composer.lock') }}
           restore-keys: |
+            ${{ runner.os }}-composer-v2-
             ${{ runner.os }}-composer-
 
       - name: Install Composer dependencies
         env:
           COMPOSER_AUTH: ${{ secrets.COMPOSER_AUTH }}
-        run: composer install --no-interaction --prefer-dist
+          COMPOSER_GITHUB_TOKEN: ${{ secrets.COMPOSER_GITHUB_TOKEN }}
+        run: |
+          if [ -n "${COMPOSER_GITHUB_TOKEN:-}" ]; then
+            composer config --global github-oauth.github.com "${COMPOSER_GITHUB_TOKEN}"
+          fi
+          composer install --no-interaction --prefer-dist
 
       - name: Run Pint
         run: vendor/bin/pint --test

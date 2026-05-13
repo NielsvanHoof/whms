@@ -6,8 +6,16 @@
     "guidelines": true,
     "mcp": true,
     "nightwatch": false,
+    "packages": [
+        "spatie/laravel-multitenancy",
+        "spatie/laravel-permission",
+        "spatie/laravel-query-builder"
+    ],
     "sail": false,
     "skills": [
-        "laravel-best-practices"
+        "laravel-best-practices",
+        "laravel-multitenancy-development",
+        "laravel-permission-development",
+        "laravel-query-builder"
     ]
 }

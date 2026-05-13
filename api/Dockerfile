@@ -1,10 +1,13 @@
 # syntax=docker/dockerfile:1
 #
-# Production image: Vite assets, Composer vendor (private Satis via BuildKit secret), nginx + php-fpm.
+# Production image: Vite assets, Composer vendor (private Dedoc packages via BuildKit secret), nginx + php-fpm.
 #
-# Local build (never commit credentials; use a secret file or env):
-#   docker buildx build --secret id=composer_auth,src=$HOME/.config/composer/auth.json -t warehouse-api:local api
-# Or:  COMPOSER_AUTH='{"http-basic":{"satis.dedoc.co":{...}}}' docker buildx build --secret id=composer_auth,env=COMPOSER_AUTH -t warehouse-api:local api
+# The `composer_auth` secret must be valid Composer COMPOSER_AUTH JSON. For dedoc/scramble-pro you
+# typically need http-basic for satis.dedoc.co *and* github-oauth for github.com (PAT with access
+# to the private repo), because Composer may fall back to git when the Satis zip cannot be used.
+#
+# Local build from monorepo root (never commit credentials); last arg is build context `api/`:
+#   docker buildx build -f api/Dockerfile --secret id=composer_auth,src=$HOME/.config/composer/auth.json -t warehouse-api:local api
 
 # -----------------------------------------------------------------------------
 # Front-end build (Vite). No package-lock.json in repo: npm install resolves deps.
@@ -23,8 +26,8 @@ COPY resources ./resources
 RUN npm run build
 
 # -----------------------------------------------------------------------------
-# Composer dependencies (production, no dev). Requires secret `composer_auth`
-# with the same JSON as Composer's COMPOSER_AUTH / auth.json for satis.dedoc.co.
+# Composer dependencies (production, no dev). Secret `composer_auth`: COMPOSER_AUTH JSON
+# (satis.dedoc.co http-basic and usually github.com oauth for scramble-pro).
 # -----------------------------------------------------------------------------
 FROM php:8.4-cli-bookworm AS vendor
 
