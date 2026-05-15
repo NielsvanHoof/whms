@@ -45,6 +45,7 @@ final class MeApiTest extends TestCase
             ->assertJsonFragment(['manager'])
             ->assertJsonFragment(['warehouses.view'])
             ->assertJsonFragment(['products.manage'])
+            ->assertJsonFragment(['inventory.view'])
             ->assertJsonFragment(['roles.manage']);
     }
 }

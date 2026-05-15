@@ -41,6 +41,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/inventory-balances": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Paginated balances for the current tenant (per location and product) */
+        get: operations["inventory-balances.index"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/inventory-balances/{inventoryBalance}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Single balance row including related warehouse, location, and product */
+        get: operations["inventory-balances.show"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/inventory-movements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Audit trail of stock changes for the current tenant */
+        get: operations["inventoryMovement.index"];
+        put?: never;
+        /** Applies a receipt, adjustment, or transfer and returns the created ledger row(s) */
+        post: operations["inventoryMovement.store"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/locations": {
         parameters: {
             query?: never;
@@ -272,6 +324,50 @@ export interface components {
             email: string;
             roles: unknown[];
         };
+        /** AdjustmentInventoryMovementData */
+        AdjustmentInventoryMovementData: {
+            location_id: number;
+            product_id: number;
+            quantity: number;
+            kind: components["schemas"]["InventoryMovementKind"];
+        };
+        /** InventoryBalanceResource */
+        InventoryBalanceResource: {
+            id: number;
+            tenant_id: number;
+            warehouse_id: number;
+            location_id: number;
+            product_id: number;
+            quantity: number;
+            warehouse?: components["schemas"]["WarehouseResource"];
+            location?: components["schemas"]["LocationResource"];
+            product?: components["schemas"]["ProductResource"];
+            created_at: string;
+            updated_at: string;
+        };
+        /**
+         * InventoryMovementKind
+         * @description Describes how stock should change for a single inventory movement request. Receipts add stock. Adjustments apply a signed delta (cycle counts, corrections). Transfers move units between two locations in one atomic transaction.
+         * @enum {string}
+         */
+        InventoryMovementKind: "receipt" | "adjustment" | "transfer";
+        /** InventoryMovementResource */
+        InventoryMovementResource: {
+            id: number;
+            tenant_id: number;
+            kind: string;
+            warehouse_id: number;
+            location_id: number;
+            product_id: number;
+            quantity_delta: number;
+            transfer_correlation_id: string | null;
+            user_id: number | null;
+            warehouse?: components["schemas"]["WarehouseResource"];
+            location?: components["schemas"]["LocationResource"];
+            product?: components["schemas"]["ProductResource"];
+            created_at: string;
+            updated_at: string;
+        };
         /** LocationResource */
         LocationResource: {
             id: number;
@@ -307,6 +403,15 @@ export interface components {
             created_at: string;
             updated_at: string;
         };
+        /** ReceiptInventoryMovementData */
+        ReceiptInventoryMovementData: {
+            location_id: number;
+            product_id: number;
+            quantity: number;
+            kind: components["schemas"]["InventoryMovementKind"];
+        };
+        /** StoreInventoryMovementData */
+        StoreInventoryMovementData: components["schemas"]["ReceiptInventoryMovementData"] | components["schemas"]["AdjustmentInventoryMovementData"] | components["schemas"]["TransferInventoryMovementData"];
         /** StoreLocationData */
         StoreLocationData: {
             warehouse_id: number;
@@ -328,6 +433,14 @@ export interface components {
         /** SyncUserRolesData */
         SyncUserRolesData: {
             roles: string[];
+        };
+        /** TransferInventoryMovementData */
+        TransferInventoryMovementData: {
+            from_location_id: number;
+            to_location_id: number;
+            product_id: number;
+            quantity: number;
+            kind: components["schemas"]["InventoryMovementKind"];
         };
         /** UpdateLocationData */
         UpdateLocationData: {
@@ -428,6 +541,174 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    "inventory-balances.index": {
+        parameters: {
+            query?: {
+                "filter[warehouse_id]"?: string;
+                "filter[location_id]"?: string;
+                "filter[product_id]"?: string;
+                sort?: ("id" | "-id" | "quantity" | "-quantity" | "created_at" | "-created_at" | "updated_at" | "-updated_at")[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paginated set of `InventoryBalanceResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["InventoryBalanceResource"][];
+                        links: {
+                            first: string | null;
+                            last: string | null;
+                            prev: string | null;
+                            next: string | null;
+                        };
+                        meta: {
+                            current_page: number;
+                            from: number | null;
+                            last_page: number;
+                            /** @description Generated paginator links. */
+                            links: {
+                                url: string | null;
+                                label: string;
+                                active: boolean;
+                            }[];
+                            /** @description Base path for paginator generated URLs. */
+                            path: string | null;
+                            /** @description Number of items shown per page. */
+                            per_page: number;
+                            /** @description Number of the last item in the slice. */
+                            to: number | null;
+                            /** @description Total number of items being paginated. */
+                            total: number;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+        };
+    };
+    "inventory-balances.show": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The inventory balance ID */
+                inventoryBalance: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description `InventoryBalanceResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["InventoryBalanceResource"];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            404: components["responses"]["ModelNotFoundException"];
+        };
+    };
+    "inventoryMovement.index": {
+        parameters: {
+            query?: {
+                "filter[warehouse_id]"?: string;
+                "filter[location_id]"?: string;
+                "filter[product_id]"?: string;
+                "filter[kind]"?: string;
+                "filter[transfer_correlation_id]"?: string;
+                sort?: ("id" | "-id" | "created_at" | "-created_at")[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paginated set of `InventoryMovementResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["InventoryMovementResource"][];
+                        links: {
+                            first: string | null;
+                            last: string | null;
+                            prev: string | null;
+                            next: string | null;
+                        };
+                        meta: {
+                            current_page: number;
+                            from: number | null;
+                            last_page: number;
+                            /** @description Generated paginator links. */
+                            links: {
+                                url: string | null;
+                                label: string;
+                                active: boolean;
+                            }[];
+                            /** @description Base path for paginator generated URLs. */
+                            path: string | null;
+                            /** @description Number of items shown per page. */
+                            per_page: number;
+                            /** @description Number of the last item in the slice. */
+                            to: number | null;
+                            /** @description Total number of items being paginated. */
+                            total: number;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+        };
+    };
+    "inventoryMovement.store": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description `StoreInventoryMovementData` */
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["StoreInventoryMovementData"];
+            };
+        };
+        responses: {
+            /** @description Array of `InventoryMovementResource` */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["InventoryMovementResource"][];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
     "locations.index": {
         parameters: {
             query?: {

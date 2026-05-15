@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Inter } from "next/font/google";
+import { NuqsAdapter } from "nuqs/adapters/next/app";
 import "./globals.css";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { AuthCookieSync } from "@/components/providers/auth-cookie-sync";
 import { QueryProvider } from "@/components/providers/query-provider";
+import { Toaster } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
@@ -42,9 +44,12 @@ export default function RootLayout({
 		>
 			<body className="flex min-h-full flex-col">
 				<QueryProvider>
-					<AuthCookieSync />
-					<ReactQueryDevtools initialIsOpen={false} />
-					{children}
+					<NuqsAdapter>
+						<AuthCookieSync />
+						<ReactQueryDevtools initialIsOpen={false} />
+						{children}
+						<Toaster />
+					</NuqsAdapter>
 				</QueryProvider>
 			</body>
 		</html>

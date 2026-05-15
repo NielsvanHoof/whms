@@ -1,11 +1,11 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { PlusIcon, SearchIcon } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { PlusIcon, SearchIcon, Trash2Icon } from "lucide-react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 
+import { DeleteConfirmDialog } from "@/components/confirm/delete-confirm-dialog";
 import { ErrorState } from "@/components/query/error-state";
 import { LoadingState } from "@/components/query/loading-state";
 import { Button } from "@/components/ui/button";
@@ -28,21 +28,14 @@ import {
 } from "@/components/ui/table";
 import { useDelayedPending } from "@/hooks/use-delayed-pending";
 import { usePermissions } from "@/hooks/use-permissions";
-import type { WarehousesIndexQuery } from "@/lib/api/warehouses";
+import { deleteWarehouse } from "@/lib/api/warehouses";
+import { useWarehouseFilters } from "@/lib/nuqs/warehouse-filters";
 import { canManageWarehouses, canViewWarehouses } from "@/lib/permissions";
-import { warehousesListQueryOptions } from "@/lib/queries/warehouses";
-
-const warehouseSortValues = [
-	"id",
-	"-id",
-	"name",
-	"-name",
-	"code",
-	"-code",
-	"created_at",
-	"-created_at",
-] as const;
-type WarehouseSort = (typeof warehouseSortValues)[number];
+import {
+	warehouseQueryKeys,
+	warehousesListQueryOptions,
+} from "@/lib/queries/warehouses";
+import { toastApiError, toastSuccess } from "@/lib/toast";
 
 const sortOptions = [
 	{ value: "__default__", label: "Newest first (default)" },
@@ -56,10 +49,6 @@ const sortOptions = [
 	{ value: "-created_at", label: "Newest first" },
 ] as const;
 
-function isWarehouseSort(value: string): value is WarehouseSort {
-	return warehouseSortValues.includes(value as WarehouseSort);
-}
-
 function formatDate(value: string): string {
 	const date = new Date(value);
 	if (Number.isNaN(date.getTime())) {
@@ -69,22 +58,11 @@ function formatDate(value: string): string {
 }
 
 export default function WarehousesPage() {
-	const router = useRouter();
-	const searchParams = useSearchParams();
+	const queryClient = useQueryClient();
 	const permissions = usePermissions();
-
-	const query = useMemo<WarehousesIndexQuery>(() => {
-		const nameFilter = searchParams.get("filter[name]") ?? "";
-		const codeFilter = searchParams.get("filter[code]") ?? "";
-		const sortValue = searchParams.get("sort") ?? "";
-		const validSort = isWarehouseSort(sortValue) ? sortValue : "";
-
-		return {
-			...(nameFilter ? { "filter[name]": nameFilter } : {}),
-			...(codeFilter ? { "filter[code]": codeFilter } : {}),
-			...(validSort ? { sort: [validSort] } : {}),
-		};
-	}, [searchParams]);
+	const [deletingId, setDeletingId] = useState<number | null>(null);
+	const { apiQuery, applyFilters, draft, resetFilters, setDraft } =
+		useWarehouseFilters();
 
 	const {
 		data: warehouses,
@@ -94,7 +72,7 @@ export default function WarehousesPage() {
 		isPending,
 		refetch,
 	} = useQuery({
-		...warehousesListQueryOptions(query),
+		...warehousesListQueryOptions(apiQuery),
 		placeholderData: (previousData) => previousData,
 	});
 
@@ -103,21 +81,21 @@ export default function WarehousesPage() {
 		minVisibleMs: 220,
 	});
 
-	const currentNameFilter = searchParams.get("filter[name]") ?? "";
-	const currentCodeFilter = searchParams.get("filter[code]") ?? "";
-	const currentSort = searchParams.get("sort") ?? "";
-	const [nameFilterValue, setNameFilterValue] = useState(currentNameFilter);
-	const [codeFilterValue, setCodeFilterValue] = useState(currentCodeFilter);
-	const [sortValue, setSortValue] = useState(currentSort || "__default__");
 	const permList = permissions.permissions;
 	const canView = canViewWarehouses(permList);
 	const canCreate = canManageWarehouses(permList);
+	const canDelete = canManageWarehouses(permList);
 
-	useEffect(() => {
-		setNameFilterValue(currentNameFilter);
-		setCodeFilterValue(currentCodeFilter);
-		setSortValue(currentSort || "__default__");
-	}, [currentCodeFilter, currentNameFilter, currentSort]);
+	const deleteMutation = useMutation({
+		mutationFn: deleteWarehouse,
+		onSuccess: async () => {
+			await queryClient.invalidateQueries({ queryKey: warehouseQueryKeys.all });
+			toastSuccess("Warehouse deleted");
+		},
+		onError: (error) => {
+			void toastApiError(error, "Could not delete warehouse.");
+		},
+	});
 
 	return (
 		<div className="flex flex-col gap-6 p-6">
@@ -154,45 +132,37 @@ export default function WarehousesPage() {
 							className="flex flex-col gap-3 md:flex-row md:items-end"
 							onSubmit={(event) => {
 								event.preventDefault();
-								const nextName = nameFilterValue.trim();
-								const nextCode = codeFilterValue.trim();
-								const nextSort =
-									sortValue === "__default__" ? "" : sortValue.trim();
-								const nextParams = new URLSearchParams();
-
-								if (nextName) {
-									nextParams.set("filter[name]", nextName);
-								}
-								if (nextCode) {
-									nextParams.set("filter[code]", nextCode);
-								}
-								if (nextSort) {
-									nextParams.set("sort", nextSort);
-								}
-
-								const queryString = nextParams.toString();
-								router.push(
-									`/warehouses${queryString ? `?${queryString}` : ""}`,
-								);
+								applyFilters();
 							}}
 						>
 							<Input
 								name="filter[name]"
 								onChange={(event) => {
-									setNameFilterValue(event.target.value);
+									setDraft((current) => ({
+										...current,
+										name: event.target.value,
+									}));
 								}}
 								placeholder="Filter by warehouse name"
-								value={nameFilterValue}
+								value={draft.name}
 							/>
 							<Input
 								name="filter[code]"
 								onChange={(event) => {
-									setCodeFilterValue(event.target.value);
+									setDraft((current) => ({
+										...current,
+										code: event.target.value,
+									}));
 								}}
 								placeholder="Filter by warehouse code"
-								value={codeFilterValue}
+								value={draft.code}
 							/>
-							<Select onValueChange={setSortValue} value={sortValue}>
+							<Select
+								onValueChange={(value) => {
+									setDraft((current) => ({ ...current, sort: value }));
+								}}
+								value={draft.sort}
+							>
 								<SelectTrigger className="w-full md:w-64">
 									<SelectValue placeholder="Sort warehouses" />
 								</SelectTrigger>
@@ -209,13 +179,7 @@ export default function WarehousesPage() {
 									<SearchIcon data-icon="inline-start" />
 									Apply
 								</Button>
-								<Button
-									onClick={() => {
-										router.push("/warehouses");
-									}}
-									type="button"
-									variant="outline"
-								>
+								<Button onClick={resetFilters} type="button" variant="outline">
 									Reset
 								</Button>
 							</div>
@@ -266,6 +230,9 @@ export default function WarehousesPage() {
 											<TableHead>Name</TableHead>
 											<TableHead>Code</TableHead>
 											<TableHead>Created</TableHead>
+											{canDelete ? (
+												<TableHead className="text-right">Actions</TableHead>
+											) : null}
 										</TableRow>
 									</TableHeader>
 									<TableBody>
@@ -280,13 +247,58 @@ export default function WarehousesPage() {
 													<TableCell>
 														{formatDate(warehouse.created_at)}
 													</TableCell>
+													{canDelete ? (
+														<TableCell className="text-right">
+															<DeleteConfirmDialog
+																description={
+																	<>
+																		This permanently removes{" "}
+																		<span className="font-medium text-foreground">
+																			{warehouse.name}
+																		</span>
+																		. Locations in this warehouse may block
+																		deletion.
+																	</>
+																}
+																isPending={
+																	deleteMutation.isPending &&
+																	deletingId === warehouse.id
+																}
+																onConfirm={async () => {
+																	setDeletingId(warehouse.id);
+																	try {
+																		await deleteMutation.mutateAsync(
+																			warehouse.id,
+																		);
+																	} finally {
+																		setDeletingId(null);
+																	}
+																}}
+																title="Delete warehouse?"
+																trigger={
+																	<Button
+																		disabled={
+																			deleteMutation.isPending &&
+																			deletingId === warehouse.id
+																		}
+																		size="sm"
+																		type="button"
+																		variant="outline"
+																	>
+																		<Trash2Icon data-icon="inline-start" />
+																		Delete
+																	</Button>
+																}
+															/>
+														</TableCell>
+													) : null}
 												</TableRow>
 											))
 										) : (
 											<TableRow>
 												<TableCell
 													className="text-muted-foreground"
-													colSpan={4}
+													colSpan={canDelete ? 5 : 4}
 												>
 													No warehouses matched the current filters.
 												</TableCell>

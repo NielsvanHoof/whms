@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\MeController;
+use App\Http\Controllers\InventoryBalanceController;
+use App\Http\Controllers\InventoryMovementController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\RoleManagementController;
@@ -37,6 +39,10 @@ Route::prefix('v1')->group(function (): void {
         Route::apiResource('warehouses', WarehouseController::class);
         Route::apiResource('products', ProductController::class);
         Route::apiResource('locations', LocationController::class);
+
+        Route::apiResource('inventory-balances', InventoryBalanceController::class)->only(['index', 'show']);
+        Route::get('inventory-movements', [InventoryMovementController::class, 'index']);
+        Route::post('inventory-movements', [InventoryMovementController::class, 'store']);
 
         Route::prefix('access')->group(function (): void {
             Route::get('roles', [RoleManagementController::class, 'roles']);

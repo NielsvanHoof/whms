@@ -55,3 +55,7 @@ export async function createWarehouse(
 		.post("api/v1/warehouses", { json: body })
 		.json<CreateWarehouseResponse>();
 }
+
+export async function deleteWarehouse(warehouseId: number): Promise<void> {
+	await createBrowserAuthedClient().delete(`api/v1/warehouses/${warehouseId}`);
+}

@@ -41,6 +41,7 @@ import {
 	type LocationFormValues,
 	locationFormSchema,
 } from "@/lib/schemas/location-form";
+import { toastApiError, toastSuccess } from "@/lib/toast";
 
 type ValidationBody =
 	components["responses"]["ValidationException"]["content"]["application/json"];
@@ -135,6 +136,9 @@ export function LocationForm({
 						await queryClient.invalidateQueries({
 							queryKey: locationQueryKeys.all,
 						});
+						toastSuccess(
+							mode === "create" ? "Location created" : "Location updated",
+						);
 						router.push("/locations");
 						router.refresh();
 					} catch (err) {
@@ -167,6 +171,7 @@ export function LocationForm({
 							}
 							return;
 						}
+						await toastApiError(err, "Could not save location.");
 						setFormError("Could not save location. Please try again.");
 					}
 				})}

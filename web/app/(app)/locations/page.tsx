@@ -3,9 +3,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { PencilIcon, PlusIcon, SearchIcon, Trash2Icon } from "lucide-react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 
+import { DeleteConfirmDialog } from "@/components/confirm/delete-confirm-dialog";
 import { ErrorState } from "@/components/query/error-state";
 import { LoadingState } from "@/components/query/loading-state";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,6 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { Spinner } from "@/components/ui/spinner";
 import {
 	Table,
 	TableBody,
@@ -28,12 +27,14 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { usePermissions } from "@/hooks/use-permissions";
-import { deleteLocation, type LocationsIndexQuery } from "@/lib/api/locations";
+import { deleteLocation } from "@/lib/api/locations";
+import { useLocationFilters } from "@/lib/nuqs/location-filters";
 import { canManageLocations, canViewLocations } from "@/lib/permissions";
 import {
 	locationQueryKeys,
 	locationsListQueryOptions,
 } from "@/lib/queries/locations";
+import { toastApiError, toastSuccess } from "@/lib/toast";
 
 const sortOptions = [
 	{ value: "__default__", label: "Newest first" },
@@ -42,58 +43,32 @@ const sortOptions = [
 	{ value: "type", label: "Type A-Z" },
 	{ value: "-type", label: "Type Z-A" },
 ] as const;
-const locationSortValues = ["code", "-code", "type", "-type"] as const;
-type LocationSort = (typeof locationSortValues)[number];
-
-function isLocationSort(value: string): value is LocationSort {
-	return locationSortValues.includes(value as LocationSort);
-}
 
 export default function LocationsPage() {
-	const router = useRouter();
 	const queryClient = useQueryClient();
-	const searchParams = useSearchParams();
 	const permissions = usePermissions();
 	const [deletingId, setDeletingId] = useState<number | null>(null);
-
-	const codeFilter = searchParams.get("filter[code]") ?? "";
-	const typeFilter = searchParams.get("filter[type]") ?? "";
-	const warehouseFilter = searchParams.get("filter[warehouse_id]") ?? "";
-	const sort = searchParams.get("sort") ?? "";
-	const [codeFilterValue, setCodeFilterValue] = useState(codeFilter);
-	const [typeFilterValue, setTypeFilterValue] = useState(typeFilter);
-	const [warehouseFilterValue, setWarehouseFilterValue] =
-		useState(warehouseFilter);
-	const [sortValue, setSortValue] = useState(sort || "__default__");
+	const { apiQuery, applyFilters, draft, resetFilters, setDraft } =
+		useLocationFilters();
 	const permList = permissions.permissions;
 	const canView = canViewLocations(permList);
 	const canCreate = canManageLocations(permList);
 	const canEdit = canManageLocations(permList);
 	const canDelete = canManageLocations(permList);
 
-	useEffect(() => {
-		setCodeFilterValue(codeFilter);
-		setTypeFilterValue(typeFilter);
-		setWarehouseFilterValue(warehouseFilter);
-		setSortValue(sort || "__default__");
-	}, [codeFilter, sort, typeFilter, warehouseFilter]);
-
-	const query = useMemo<LocationsIndexQuery>(() => {
-		const validSort = isLocationSort(sort) ? sort : "";
-		return {
-			...(codeFilter ? { "filter[code]": codeFilter } : {}),
-			...(typeFilter ? { "filter[type]": typeFilter } : {}),
-			...(warehouseFilter ? { "filter[warehouse_id]": warehouseFilter } : {}),
-			...(validSort ? { sort: [validSort] } : {}),
-		};
-	}, [codeFilter, sort, typeFilter, warehouseFilter]);
-
 	const listQuery = useQuery({
-		...locationsListQueryOptions(query),
+		...locationsListQueryOptions(apiQuery),
 		placeholderData: (previousData) => previousData,
 	});
 	const deleteMutation = useMutation({
 		mutationFn: deleteLocation,
+		onSuccess: async () => {
+			await queryClient.invalidateQueries({ queryKey: locationQueryKeys.all });
+			toastSuccess("Location deleted");
+		},
+		onError: (error) => {
+			void toastApiError(error, "Could not delete location.");
+		},
 	});
 
 	return (
@@ -131,37 +106,45 @@ export default function LocationsPage() {
 							className="flex flex-col gap-3 md:flex-row md:items-end"
 							onSubmit={(event) => {
 								event.preventDefault();
-								const next = new URLSearchParams();
-								if (codeFilterValue.trim())
-									next.set("filter[code]", codeFilterValue.trim());
-								if (typeFilterValue.trim())
-									next.set("filter[type]", typeFilterValue.trim());
-								if (warehouseFilterValue.trim())
-									next.set("filter[warehouse_id]", warehouseFilterValue.trim());
-								if (sortValue !== "__default__") next.set("sort", sortValue);
-								router.push(
-									`/locations${next.toString() ? `?${next.toString()}` : ""}`,
-								);
+								applyFilters();
 							}}
 						>
 							<Input
-								onChange={(event) => setCodeFilterValue(event.target.value)}
+								onChange={(event) => {
+									setDraft((current) => ({
+										...current,
+										code: event.target.value,
+									}));
+								}}
 								placeholder="Code"
-								value={codeFilterValue}
+								value={draft.code}
 							/>
 							<Input
-								onChange={(event) => setTypeFilterValue(event.target.value)}
+								onChange={(event) => {
+									setDraft((current) => ({
+										...current,
+										type: event.target.value,
+									}));
+								}}
 								placeholder="Type"
-								value={typeFilterValue}
+								value={draft.type}
 							/>
 							<Input
-								onChange={(event) =>
-									setWarehouseFilterValue(event.target.value)
-								}
+								onChange={(event) => {
+									setDraft((current) => ({
+										...current,
+										warehouseId: event.target.value,
+									}));
+								}}
 								placeholder="Warehouse ID"
-								value={warehouseFilterValue}
+								value={draft.warehouseId}
 							/>
-							<Select onValueChange={setSortValue} value={sortValue}>
+							<Select
+								onValueChange={(value) => {
+									setDraft((current) => ({ ...current, sort: value }));
+								}}
+								value={draft.sort}
+							>
 								<SelectTrigger className="w-full md:w-56">
 									<SelectValue />
 								</SelectTrigger>
@@ -173,10 +156,15 @@ export default function LocationsPage() {
 									))}
 								</SelectContent>
 							</Select>
-							<Button type="submit">
-								<SearchIcon data-icon="inline-start" />
-								Apply
-							</Button>
+							<div className="flex gap-2">
+								<Button type="submit">
+									<SearchIcon data-icon="inline-start" />
+									Apply
+								</Button>
+								<Button onClick={resetFilters} type="button" variant="outline">
+									Reset
+								</Button>
+							</div>
 						</form>
 					</CardContent>
 				</Card>
@@ -236,42 +224,47 @@ export default function LocationsPage() {
 																</Button>
 															) : null}
 															{canDelete ? (
-																<Button
-																	disabled={
+																<DeleteConfirmDialog
+																	description={
+																		<>
+																			This permanently removes location{" "}
+																			<span className="font-medium text-foreground">
+																				{location.code}
+																			</span>
+																			. Stock or references tied to this
+																			location may block deletion.
+																		</>
+																	}
+																	isPending={
 																		deleteMutation.isPending &&
 																		deletingId === location.id
 																	}
-																	onClick={async () => {
-																		if (
-																			!window.confirm(
-																				`Delete location ${location.code}?`,
-																			)
-																		)
-																			return;
+																	onConfirm={async () => {
 																		setDeletingId(location.id);
-																		await deleteMutation.mutateAsync(
-																			location.id,
-																		);
-																		await queryClient.invalidateQueries({
-																			queryKey: locationQueryKeys.all,
-																		});
-																		setDeletingId(null);
+																		try {
+																			await deleteMutation.mutateAsync(
+																				location.id,
+																			);
+																		} finally {
+																			setDeletingId(null);
+																		}
 																	}}
-																	size="sm"
-																	type="button"
-																	variant="outline"
-																>
-																	{deleteMutation.isPending &&
-																	deletingId === location.id ? (
-																		<Spinner
-																			aria-hidden
-																			data-icon="inline-start"
-																		/>
-																	) : (
-																		<Trash2Icon data-icon="inline-start" />
-																	)}
-																	Delete
-																</Button>
+																	title="Delete location?"
+																	trigger={
+																		<Button
+																			disabled={
+																				deleteMutation.isPending &&
+																				deletingId === location.id
+																			}
+																			size="sm"
+																			type="button"
+																			variant="outline"
+																		>
+																			<Trash2Icon data-icon="inline-start" />
+																			Delete
+																		</Button>
+																	}
+																/>
 															) : null}
 														</div>
 													</TableCell>

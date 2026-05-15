@@ -35,6 +35,7 @@ import {
 	type WarehouseCreateFormValues,
 	warehouseCreateSchema,
 } from "@/lib/schemas/warehouse-create";
+import { toastApiError, toastSuccess } from "@/lib/toast";
 
 type ValidationBody =
 	components["responses"]["ValidationException"]["content"]["application/json"];
@@ -90,6 +91,7 @@ export function CreateWarehouseForm() {
 						await queryClient.invalidateQueries({
 							queryKey: warehouseQueryKeys.all,
 						});
+						toastSuccess("Warehouse created");
 						router.push("/warehouses");
 						router.refresh();
 					} catch (err) {
@@ -125,12 +127,20 @@ export function CreateWarehouseForm() {
 						}
 
 						if (err instanceof HTTPError) {
+							await toastApiError(
+								err,
+								`Could not create warehouse (${err.response.status}).`,
+							);
 							setFormError(
 								`Could not create warehouse (${err.response.status}). Try again.`,
 							);
 							return;
 						}
 
+						await toastApiError(
+							err,
+							"Network error. Check that the API is running and try again.",
+						);
 						setFormError(
 							"Network error. Check that the API is running and try again.",
 						);

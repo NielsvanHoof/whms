@@ -14,6 +14,8 @@ export const PERMISSIONS = {
 	productsManage: "products.manage",
 	rolesView: "roles.view",
 	rolesManage: "roles.manage",
+	inventoryView: "inventory.view",
+	inventoryManage: "inventory.manage",
 } as const;
 
 export type PermissionKey =
@@ -106,4 +108,21 @@ export function canManageRoles(
 	permissions: readonly string[] | undefined,
 ): boolean {
 	return hasPermission(permissions, PERMISSIONS.rolesManage);
+}
+
+/** Stock balances and movement history (ledger). */
+export function canViewInventory(
+	permissions: readonly string[] | undefined,
+): boolean {
+	return hasAnyPermission(permissions, [
+		PERMISSIONS.inventoryView,
+		PERMISSIONS.inventoryManage,
+	]);
+}
+
+/** Receipts, adjustments, and transfers. */
+export function canManageInventory(
+	permissions: readonly string[] | undefined,
+): boolean {
+	return hasPermission(permissions, PERMISSIONS.inventoryManage);
 }

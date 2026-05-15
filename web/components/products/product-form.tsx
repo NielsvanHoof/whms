@@ -37,6 +37,7 @@ import {
 	type ProductFormValues,
 	productFormSchema,
 } from "@/lib/schemas/product-form";
+import { toastApiError, toastSuccess } from "@/lib/toast";
 
 type ValidationBody =
 	components["responses"]["ValidationException"]["content"]["application/json"];
@@ -114,6 +115,9 @@ export function ProductForm({
 						await queryClient.invalidateQueries({
 							queryKey: productQueryKeys.all,
 						});
+						toastSuccess(
+							mode === "create" ? "Product created" : "Product updated",
+						);
 						router.push("/products");
 						router.refresh();
 					} catch (err) {
@@ -152,6 +156,7 @@ export function ProductForm({
 							}
 							return;
 						}
+						await toastApiError(err, "Could not save product.");
 						setFormError("Could not save product. Please try again.");
 					}
 				})}

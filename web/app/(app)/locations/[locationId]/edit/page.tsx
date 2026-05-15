@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeftIcon } from "lucide-react";
 import Link from "next/link";
+import { use } from "react";
 
 import { PermissionGuard } from "@/components/auth/permission-guard";
 import { LocationForm } from "@/components/locations/location-form";
@@ -15,10 +16,16 @@ import { locationDetailQueryOptions } from "@/lib/queries/locations";
 export default function EditLocationPage({
 	params,
 }: {
-	params: { locationId: string };
+	params: Promise<{ locationId: string }>;
 }) {
-	const locationId = Number.parseInt(params.locationId, 10);
-	const query = useQuery(locationDetailQueryOptions(locationId));
+	const { locationId: locationIdParam } = use(params);
+	const locationId = Number.parseInt(locationIdParam, 10);
+	const idIsValid = Number.isFinite(locationId);
+
+	const query = useQuery({
+		...locationDetailQueryOptions(idIsValid ? locationId : 0),
+		enabled: idIsValid,
+	});
 
 	return (
 		<PermissionGuard allOf={[PERMISSIONS.locationsManage]}>
@@ -39,8 +46,16 @@ export default function EditLocationPage({
 						</Link>
 					</Button>
 				</div>
-				{query.isPending ? <LoadingState title="Loading location" /> : null}
-				{query.isError ? (
+				{!idIsValid ? (
+					<ErrorState
+						description="The location ID in the URL is not valid."
+						title="Invalid location"
+					/>
+				) : null}
+				{idIsValid && query.isPending ? (
+					<LoadingState title="Loading location" />
+				) : null}
+				{idIsValid && query.isError ? (
 					<ErrorState error={query.error} title="Could not load location" />
 				) : null}
 				{query.data ? (

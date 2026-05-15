@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeftIcon } from "lucide-react";
 import Link from "next/link";
+import { use } from "react";
 
 import { PermissionGuard } from "@/components/auth/permission-guard";
 import { ProductForm } from "@/components/products/product-form";
@@ -15,10 +16,16 @@ import { productDetailQueryOptions } from "@/lib/queries/products";
 export default function EditProductPage({
 	params,
 }: {
-	params: { productId: string };
+	params: Promise<{ productId: string }>;
 }) {
-	const productId = Number.parseInt(params.productId, 10);
-	const query = useQuery(productDetailQueryOptions(productId));
+	const { productId: productIdParam } = use(params);
+	const productId = Number.parseInt(productIdParam, 10);
+	const idIsValid = Number.isFinite(productId);
+
+	const query = useQuery({
+		...productDetailQueryOptions(idIsValid ? productId : 0),
+		enabled: idIsValid,
+	});
 
 	return (
 		<PermissionGuard allOf={[PERMISSIONS.productsManage]}>
@@ -39,8 +46,16 @@ export default function EditProductPage({
 						</Link>
 					</Button>
 				</div>
-				{query.isPending ? <LoadingState title="Loading product" /> : null}
-				{query.isError ? (
+				{!idIsValid ? (
+					<ErrorState
+						description="The product ID in the URL is not valid."
+						title="Invalid product"
+					/>
+				) : null}
+				{idIsValid && query.isPending ? (
+					<LoadingState title="Loading product" />
+				) : null}
+				{idIsValid && query.isError ? (
 					<ErrorState error={query.error} title="Could not load product" />
 				) : null}
 				{query.data ? (

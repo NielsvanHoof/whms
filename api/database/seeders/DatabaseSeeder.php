@@ -32,6 +32,8 @@ final class DatabaseSeeder extends Seeder
             'products.manage',
             'locations.view',
             'locations.manage',
+            'inventory.view',
+            'inventory.manage',
             'roles.view',
             'roles.manage',
         ];
@@ -49,11 +51,14 @@ final class DatabaseSeeder extends Seeder
                 'products.manage',
                 'locations.view',
                 'locations.manage',
+                'inventory.view',
+                'inventory.manage',
             ],
             'viewer' => [
                 'warehouses.view',
                 'products.view',
                 'locations.view',
+                'inventory.view',
             ],
         ];
 

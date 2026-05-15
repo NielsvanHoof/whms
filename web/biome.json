@@ -42,6 +42,11 @@
 			"formatter": { "enabled": false },
 			"linter": { "enabled": false },
 			"assist": { "enabled": false }
+		},
+		{
+			"includes": ["components/ui/chart.tsx"],
+			"linter": { "enabled": false },
+			"assist": { "enabled": false }
 		}
 	]
 }

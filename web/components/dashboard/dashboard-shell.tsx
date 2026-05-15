@@ -11,6 +11,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 
+import { AppBreadcrumbs } from "@/components/navigation/app-breadcrumbs";
 import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
@@ -25,6 +26,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/hooks/use-auth";
 import { usePermissions } from "@/hooks/use-permissions";
 import {
+	canViewInventory,
 	canViewLocations,
 	canViewProducts,
 	canViewRoles,
@@ -56,6 +58,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 	const showWarehousesNav = canViewWarehouses(permList);
 	const showLocationsNav = canViewLocations(permList);
 	const showProductsNav = canViewProducts(permList);
+	const showInventoryNav = canViewInventory(permList);
 	const canOpenAdmin = canViewRoles(permList);
 
 	return (
@@ -112,6 +115,17 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 							Products
 						</Link>
 					) : null}
+					{showInventoryNav ? (
+						<Link
+							className={cn(
+								"flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted",
+								pathname.startsWith("/inventory") && "bg-muted font-medium",
+							)}
+							href="/inventory/balances"
+						>
+							Inventory
+						</Link>
+					) : null}
 				</nav>
 				<div className="mt-auto flex flex-col gap-2 p-2">
 					<Separator />
@@ -166,6 +180,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 				</div>
 			</aside>
 			<div className="flex min-h-0 min-w-0 flex-1 flex-col bg-background">
+				<div className="border-b border-border/80 px-6 py-3">
+					<AppBreadcrumbs />
+				</div>
 				{children}
 			</div>
 		</div>

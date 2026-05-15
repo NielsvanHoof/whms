@@ -26,6 +26,7 @@ import {
 	accessUsersQueryOptions,
 } from "@/lib/queries/access";
 import { meQueryKeys } from "@/lib/queries/me";
+import { toastApiError, toastSuccess } from "@/lib/toast";
 
 function keyForRoleSet(roleNames: string[]): string {
 	return [...roleNames].sort().join("|");
@@ -48,6 +49,10 @@ export default function AdminUsersPage() {
 			await queryClient.invalidateQueries({
 				queryKey: meQueryKeys.all,
 			});
+			toastSuccess("User roles updated");
+		},
+		onError: (error) => {
+			void toastApiError(error, "Could not update user roles.");
 		},
 	});
 
