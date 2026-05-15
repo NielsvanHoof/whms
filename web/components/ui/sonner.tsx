@@ -7,11 +7,14 @@ import {
 	OctagonXIcon,
 	TriangleAlertIcon,
 } from "lucide-react";
+import { useTheme } from "next-themes";
 import type * as React from "react";
 import { Toaster as Sonner, type ToasterProps } from "sonner";
 
 /** Global toast host (shadcn uses Sonner). */
 function Toaster({ ...props }: ToasterProps) {
+	const { resolvedTheme } = useTheme();
+
 	return (
 		<Sonner
 			className="toaster group"
@@ -33,7 +36,7 @@ function Toaster({ ...props }: ToasterProps) {
 					"--border-radius": "var(--radius)",
 				} as React.CSSProperties
 			}
-			theme="light"
+			theme={resolvedTheme === "dark" ? "dark" : "light"}
 			toastOptions={{
 				classNames: {
 					toast: "cn-toast",

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { LoginForm } from "@/components/login-form";
+import { ModeToggle } from "@/components/theme/mode-toggle";
 
 export const metadata: Metadata = {
 	title: "Sign in · Warehouse",
@@ -14,6 +15,9 @@ export const metadata: Metadata = {
 export default function LoginPage() {
 	return (
 		<div className="relative flex min-h-full flex-1 flex-col items-center justify-center overflow-hidden px-4 py-16">
+			<div className="absolute top-4 right-4 z-10">
+				<ModeToggle />
+			</div>
 			{/* Layered backdrop: soft gradient + fine grid (warehouse / floor-tile feel). */}
 			<div
 				aria-hidden

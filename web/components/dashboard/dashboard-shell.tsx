@@ -12,6 +12,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 import { AppBreadcrumbs } from "@/components/navigation/app-breadcrumbs";
+import { ModeToggle } from "@/components/theme/mode-toggle";
 import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
@@ -180,8 +181,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 				</div>
 			</aside>
 			<div className="flex min-h-0 min-w-0 flex-1 flex-col bg-background">
-				<div className="border-b border-border/80 px-6 py-3">
+				<div className="flex items-center justify-between gap-3 border-b border-border/80 px-6 py-3">
 					<AppBreadcrumbs />
+					<ModeToggle />
 				</div>
 				{children}
 			</div>
