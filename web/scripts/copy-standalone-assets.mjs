@@ -12,9 +12,13 @@ if (!existsSync(join(standaloneDir, "server.js"))) {
 }
 
 // Required for standalone: https://nextjs.org/docs/app/api-reference/config/next-config-js/output
-cpSync(join(root, "public"), join(standaloneDir, "public"), { recursive: true });
+cpSync(join(root, "public"), join(standaloneDir, "public"), {
+	recursive: true,
+});
 cpSync(join(root, ".next", "static"), join(standaloneDir, ".next", "static"), {
 	recursive: true,
 });
 
-console.log("copy-standalone-assets: copied public/ and .next/static/ into standalone");
+console.log(
+	"copy-standalone-assets: copied public/ and .next/static/ into standalone",
+);
