@@ -29,8 +29,8 @@ import {
 import { useDelayedPending } from "@/hooks/use-delayed-pending";
 import { usePermissions } from "@/hooks/use-permissions";
 import { deleteWarehouse } from "@/lib/api/warehouses";
-import { useWarehouseFilters } from "@/lib/nuqs/warehouse-filters";
 import { canManageWarehouses, canViewWarehouses } from "@/lib/permissions";
+import { useWarehouseFilters } from "@/lib/nuqs/warehouse-filters";
 import {
 	warehouseQueryKeys,
 	warehousesListQueryOptions,
@@ -39,6 +39,7 @@ import { toastApiError, toastSuccess } from "@/lib/toast";
 
 const sortOptions = [
 	{ value: "__default__", label: "Newest first (default)" },
+
 	{ value: "id", label: "ID ascending" },
 	{ value: "-id", label: "ID descending" },
 	{ value: "name", label: "Name A-Z" },
@@ -179,7 +180,11 @@ export default function WarehousesPage() {
 									<SearchIcon data-icon="inline-start" />
 									Apply
 								</Button>
-								<Button onClick={resetFilters} type="button" variant="outline">
+								<Button
+									onClick={resetFilters}
+									type="button"
+									variant="outline"
+								>
 									Reset
 								</Button>
 							</div>
