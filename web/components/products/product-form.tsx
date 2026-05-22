@@ -2,12 +2,15 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { HTTPError } from "ky";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 
+import {
+	type ProductFormSubmitContext,
+	submitProductForm,
+} from "@/components/products/product-form-submit";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
@@ -31,16 +34,10 @@ import {
 	type UpdateProductRequestBody,
 	updateProduct,
 } from "@/lib/api/products";
-import type { components } from "@/lib/openapi/schema";
-import { productQueryKeys } from "@/lib/queries/products";
 import {
 	type ProductFormValues,
 	productFormSchema,
 } from "@/lib/schemas/product-form";
-import { toastApiError, toastSuccess } from "@/lib/toast";
-
-type ValidationBody =
-	components["responses"]["ValidationException"]["content"]["application/json"];
 
 type ProductFormProps = {
 	mode: "create" | "edit";
@@ -89,78 +86,27 @@ export function ProductForm({
 	} = form;
 	const isActiveValue = watch("isActive");
 
+	const submitCtx = useMemo<ProductFormSubmitContext>(
+		() => ({
+			mode,
+			router,
+			queryClient,
+			createMutation,
+			updateMutation,
+			setFormError,
+			setError,
+		}),
+		[mode, router, queryClient, createMutation, updateMutation, setError],
+	);
+
+	const onValidSubmit = useCallback(
+		(values: ProductFormValues) => submitProductForm(values, submitCtx),
+		[submitCtx],
+	);
+
 	return (
 		<Card className="max-w-xl">
-			<form
-				noValidate
-				onSubmit={handleSubmit(async (values) => {
-					setFormError(null);
-					try {
-						if (mode === "create") {
-							await createMutation.mutateAsync({
-								sku: values.sku,
-								name: values.name,
-								unit: values.unit,
-								is_active: values.isActive,
-							});
-						} else {
-							await updateMutation.mutateAsync({
-								sku: values.sku,
-								name: values.name,
-								unit: values.unit,
-								is_active: values.isActive,
-							});
-						}
-
-						await queryClient.invalidateQueries({
-							queryKey: productQueryKeys.all,
-						});
-						toastSuccess(
-							mode === "create" ? "Product created" : "Product updated",
-						);
-						router.push("/products");
-						router.refresh();
-					} catch (err) {
-						if (err instanceof HTTPError && err.response.status === 422) {
-							const body = (await err.response.json()) as ValidationBody;
-							if (body.errors?.sku?.[0]) {
-								setError("sku", {
-									type: "server",
-									message: body.errors.sku[0],
-								});
-							}
-							if (body.errors?.name?.[0]) {
-								setError("name", {
-									type: "server",
-									message: body.errors.name[0],
-								});
-							}
-							if (body.errors?.unit?.[0]) {
-								setError("unit", {
-									type: "server",
-									message: body.errors.unit[0],
-								});
-							}
-							if (body.errors?.is_active?.[0]) {
-								setError("isActive", {
-									type: "server",
-									message: body.errors.is_active[0],
-								});
-							}
-							if (
-								!body.errors?.sku &&
-								!body.errors?.name &&
-								!body.errors?.unit
-							) {
-								setFormError(body.message ?? "Could not save product.");
-							}
-							return;
-						}
-						await toastApiError(err, "Could not save product.");
-						setFormError("Could not save product. Please try again.");
-					}
-				})}
-			>
+			<form noValidate onSubmit={handleSubmit(onValidSubmit)}>
 				<CardContent className="flex flex-col gap-5">
 					{formError ? (
 						<Alert variant="destructive">

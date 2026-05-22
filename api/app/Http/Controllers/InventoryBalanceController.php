@@ -28,7 +28,7 @@ final class InventoryBalanceController extends Controller
             )
             ->allowedSorts('id', 'quantity', 'created_at', 'updated_at')
             ->defaultSort('-id')
-            ->paginate(15)
+            ->paginate(request()->input('per_page', 15))
             ->withQueryString();
 
         return InventoryBalanceResource::collection($balances);

@@ -5,8 +5,9 @@ import { useMemo } from "react";
 
 import type { ProductsIndexQuery } from "@/lib/api/products";
 
-import { parseAsOptionalString, parseAsSelectSort } from "./parsers";
+import { parseAsOptionalString } from "./parsers";
 import { useFilterDraft } from "./use-filter-draft";
+import { useListSortParser } from "./use-list-sort-parser";
 
 const productSortValues = ["name", "-name", "sku", "-sku"] as const;
 
@@ -16,16 +17,20 @@ function isProductSort(value: string): value is ProductSort {
 	return productSortValues.includes(value as ProductSort);
 }
 
-const productFilterParsers = {
-	"filter[name]": parseAsOptionalString,
-	"filter[sku]": parseAsOptionalString,
-	"filter[unit]": parseAsOptionalString,
-	"filter[is_active]": parseAsOptionalString,
-	sort: parseAsSelectSort,
-} as const;
-
 export function useProductFilters() {
-	const [urlState, setUrlState] = useQueryStates(productFilterParsers, {
+	const sortParser = useListSortParser("products");
+	const filterParsers = useMemo(
+		() => ({
+			"filter[name]": parseAsOptionalString,
+			"filter[sku]": parseAsOptionalString,
+			"filter[unit]": parseAsOptionalString,
+			"filter[is_active]": parseAsOptionalString,
+			sort: sortParser,
+		}),
+		[sortParser],
+	);
+
+	const [urlState, setUrlState] = useQueryStates(filterParsers, {
 		history: "push",
 	});
 
@@ -79,6 +84,7 @@ export function useProductFilters() {
 	};
 
 	return {
+		applied,
 		apiQuery,
 		applyFilters,
 		draft,

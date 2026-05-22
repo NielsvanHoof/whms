@@ -1,3 +1,7 @@
+import {
+	appendListPage,
+	type ListPageQuery,
+} from "@/lib/api/list-query-params";
 import { createBrowserAuthedClient } from "@/lib/auth";
 import type { components, operations } from "@/lib/openapi/schema";
 
@@ -19,7 +23,9 @@ export type UpdateLocationRequestBody =
 export type UpdateLocationResponse =
 	operations["locations.update"]["responses"]["200"]["content"]["application/json"];
 
-function toLocationsSearchParams(query: LocationsIndexQuery): URLSearchParams {
+function toLocationsSearchParams(
+	query: LocationsIndexQuery & ListPageQuery,
+): URLSearchParams {
 	const searchParams = new URLSearchParams();
 
 	if (query?.["filter[warehouse_id]"]) {
@@ -36,12 +42,13 @@ function toLocationsSearchParams(query: LocationsIndexQuery): URLSearchParams {
 			searchParams.append("sort[]", sortValue);
 		}
 	}
+	appendListPage(searchParams, query);
 
 	return searchParams;
 }
 
 export async function listLocations(
-	query: LocationsIndexQuery = {},
+	query: LocationsIndexQuery & ListPageQuery = {},
 ): Promise<LocationsIndexResponse> {
 	return createBrowserAuthedClient()
 		.get("api/v1/locations", {

@@ -1,3 +1,7 @@
+import {
+	appendListPage,
+	type ListPageQuery,
+} from "@/lib/api/list-query-params";
 import { createBrowserAuthedClient } from "@/lib/auth";
 import type { components, operations } from "@/lib/openapi/schema";
 
@@ -13,6 +17,9 @@ export type InventoryMovementsIndexQuery =
 	operations["inventoryMovement.index"]["parameters"]["query"];
 export type InventoryMovementsIndexResponse =
 	operations["inventoryMovement.index"]["responses"]["200"]["content"]["application/json"];
+
+export type InventoryMovementShowResponse =
+	operations["inventoryMovement.show"]["responses"]["200"]["content"]["application/json"];
 
 export type InventoryMovementKind =
 	components["schemas"]["InventoryMovementKind"];
@@ -33,7 +40,7 @@ export type CreateInventoryMovementResponse =
 	operations["inventoryMovement.store"]["responses"]["201"]["content"]["application/json"];
 
 function toInventoryBalancesSearchParams(
-	query: InventoryBalancesIndexQuery,
+	query: InventoryBalancesIndexQuery & ListPageQuery,
 ): URLSearchParams {
 	const searchParams = new URLSearchParams();
 
@@ -51,12 +58,13 @@ function toInventoryBalancesSearchParams(
 			searchParams.append("sort[]", sortValue);
 		}
 	}
+	appendListPage(searchParams, query);
 
 	return searchParams;
 }
 
 function toInventoryMovementsSearchParams(
-	query: InventoryMovementsIndexQuery,
+	query: InventoryMovementsIndexQuery & ListPageQuery,
 ): URLSearchParams {
 	const searchParams = new URLSearchParams();
 
@@ -83,12 +91,13 @@ function toInventoryMovementsSearchParams(
 			searchParams.append("sort[]", sortValue);
 		}
 	}
+	appendListPage(searchParams, query);
 
 	return searchParams;
 }
 
 export async function listInventoryBalances(
-	query: InventoryBalancesIndexQuery = {},
+	query: InventoryBalancesIndexQuery & ListPageQuery = {},
 ): Promise<InventoryBalancesIndexResponse> {
 	return createBrowserAuthedClient()
 		.get("api/v1/inventory-balances", {
@@ -106,13 +115,21 @@ export async function showInventoryBalance(
 }
 
 export async function listInventoryMovements(
-	query: InventoryMovementsIndexQuery = {},
+	query: InventoryMovementsIndexQuery & ListPageQuery = {},
 ): Promise<InventoryMovementsIndexResponse> {
 	return createBrowserAuthedClient()
 		.get("api/v1/inventory-movements", {
 			searchParams: toInventoryMovementsSearchParams(query),
 		})
 		.json<InventoryMovementsIndexResponse>();
+}
+
+export async function showInventoryMovement(
+	inventoryMovementId: number,
+): Promise<InventoryMovementShowResponse> {
+	return createBrowserAuthedClient()
+		.get(`api/v1/inventory-movements/${inventoryMovementId}`)
+		.json<InventoryMovementShowResponse>();
 }
 
 export async function createInventoryMovement(

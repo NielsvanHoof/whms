@@ -1,21 +1,17 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { SearchIcon } from "lucide-react";
 import Link from "next/link";
+import { useMemo } from "react";
 
+import { ListFilterBar } from "@/components/filters/list-filter-bar";
+import { ListPagination } from "@/components/filters/list-pagination";
+import { SortFilterSelect } from "@/components/filters/sort-filter-select";
+import { InventoryEntityFilters } from "@/components/inventory/inventory-entity-filters";
 import { ErrorState } from "@/components/query/error-state";
 import { LoadingState } from "@/components/query/loading-state";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
+import { Card, CardContent } from "@/components/ui/card";
 import {
 	Table,
 	TableBody,
@@ -25,7 +21,9 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { useDelayedPending } from "@/hooks/use-delayed-pending";
+import { filtersAreDirty, withPaginationParams } from "@/lib/nuqs/filter-utils";
 import { useInventoryBalanceFilters } from "@/lib/nuqs/inventory-balance-filters";
+import { useListPage } from "@/lib/nuqs/use-list-page";
 import { inventoryBalancesListQueryOptions } from "@/lib/queries/inventory";
 
 const sortOptions = [
@@ -37,8 +35,30 @@ const sortOptions = [
 ] as const;
 
 export default function InventoryBalancesPage() {
-	const { apiQuery, applyFilters, draft, resetFilters, setDraft } =
-		useInventoryBalanceFilters();
+	const { goToPage, page, perPage, resetPage, setPerPage } = useListPage();
+	const {
+		applied,
+		apiQuery: filterQuery,
+		applyFilters: applyFiltersBase,
+		draft,
+		resetFilters: resetFiltersBase,
+		setDraft,
+	} = useInventoryBalanceFilters();
+	const isDirty = filtersAreDirty(applied, draft);
+	const apiQuery = useMemo(
+		() => withPaginationParams(filterQuery, { page, perPage }),
+		[filterQuery, page, perPage],
+	);
+
+	const applyFilters = () => {
+		applyFiltersBase();
+		resetPage();
+	};
+
+	const resetFilters = () => {
+		resetFiltersBase();
+		resetPage();
+	};
 
 	const listQuery = useQuery({
 		...inventoryBalancesListQueryOptions(apiQuery),
@@ -69,76 +89,20 @@ export default function InventoryBalancesPage() {
 			</div>
 
 			<Card>
-				<CardHeader>
-					<CardTitle>Filters</CardTitle>
-				</CardHeader>
-				<CardContent>
-					<form
-						className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-end"
-						onSubmit={(event) => {
-							event.preventDefault();
-							applyFilters();
+				<ListFilterBar
+					isDirty={isDirty}
+					onApply={applyFilters}
+					onReset={resetFilters}
+				>
+					<InventoryEntityFilters draft={draft} setDraft={setDraft} />
+					<SortFilterSelect
+						onValueChange={(value) => {
+							setDraft((current) => ({ ...current, sort: value }));
 						}}
-					>
-						<Input
-							onChange={(event) => {
-								setDraft((current) => ({
-									...current,
-									warehouseId: event.target.value,
-								}));
-							}}
-							placeholder="Warehouse ID"
-							value={draft.warehouseId}
-						/>
-						<Input
-							onChange={(event) => {
-								setDraft((current) => ({
-									...current,
-									locationId: event.target.value,
-								}));
-							}}
-							placeholder="Location ID"
-							value={draft.locationId}
-						/>
-						<Input
-							onChange={(event) => {
-								setDraft((current) => ({
-									...current,
-									productId: event.target.value,
-								}));
-							}}
-							placeholder="Product ID"
-							value={draft.productId}
-						/>
-						<Select
-							onValueChange={(value) => {
-								setDraft((current) => ({ ...current, sort: value }));
-							}}
-							value={draft.sort}
-						>
-							<SelectTrigger className="w-full md:w-56">
-								<SelectValue />
-							</SelectTrigger>
-							<SelectContent>
-								{sortOptions.map((option) => (
-									<SelectItem key={option.value} value={option.value}>
-										{option.label}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-						<Button type="submit">
-							<SearchIcon data-icon="inline-start" />
-							Apply
-						</Button>
-						<Button onClick={resetFilters} type="button" variant="outline">
-							Reset
-						</Button>
-					</form>
-				</CardContent>
-			</Card>
-
-			<Card>
+						options={sortOptions}
+						value={draft.sort}
+					/>
+				</ListFilterBar>
 				<CardContent className="pt-6">
 					{showPending && !listQuery.data ? (
 						<LoadingState title="Loading balances" />
@@ -151,12 +115,13 @@ export default function InventoryBalancesPage() {
 					) : null}
 					{listQuery.data ? (
 						<div className="flex flex-col gap-3">
-							<p className="text-muted-foreground text-sm">
-								{listQuery.data.meta.total} balance
-								{listQuery.data.meta.total === 1 ? "" : "es"} (page{" "}
-								{listQuery.data.meta.current_page} of{" "}
-								{listQuery.data.meta.last_page})
-							</p>
+							<ListPagination
+								itemLabel="balance"
+								meta={listQuery.data.meta}
+								onPageChange={goToPage}
+								onPerPageChange={setPerPage}
+								perPage={perPage}
+							/>
 							<Table>
 								<TableHeader>
 									<TableRow>

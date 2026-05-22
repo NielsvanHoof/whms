@@ -5,8 +5,9 @@ import { useMemo } from "react";
 
 import type { InventoryBalancesIndexQuery } from "@/lib/api/inventory";
 
-import { parseAsOptionalString, parseAsSelectSort } from "./parsers";
+import { parseAsOptionalString } from "./parsers";
 import { useFilterDraft } from "./use-filter-draft";
+import { useListSortParser } from "./use-list-sort-parser";
 
 const balanceSortValues = [
 	"id",
@@ -25,15 +26,19 @@ function isBalanceSort(value: string): value is BalanceSort {
 	return balanceSortValues.includes(value as BalanceSort);
 }
 
-const balanceFilterParsers = {
-	"filter[warehouse_id]": parseAsOptionalString,
-	"filter[location_id]": parseAsOptionalString,
-	"filter[product_id]": parseAsOptionalString,
-	sort: parseAsSelectSort,
-} as const;
-
 export function useInventoryBalanceFilters() {
-	const [urlState, setUrlState] = useQueryStates(balanceFilterParsers, {
+	const sortParser = useListSortParser("inventory_balances");
+	const filterParsers = useMemo(
+		() => ({
+			"filter[warehouse_id]": parseAsOptionalString,
+			"filter[location_id]": parseAsOptionalString,
+			"filter[product_id]": parseAsOptionalString,
+			sort: sortParser,
+		}),
+		[sortParser],
+	);
+
+	const [urlState, setUrlState] = useQueryStates(filterParsers, {
 		history: "push",
 	});
 
@@ -86,6 +91,7 @@ export function useInventoryBalanceFilters() {
 	};
 
 	return {
+		applied,
 		apiQuery,
 		applyFilters,
 		draft,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -30,19 +30,33 @@ import { locationsListQueryOptions } from "@/lib/queries/locations";
 import { productsListQueryOptions } from "@/lib/queries/products";
 import { toastApiError, toastSuccess } from "@/lib/toast";
 
+export type RecordMovementPrefill = {
+	kind?: InventoryMovementKind;
+	locationId?: string;
+	productId?: string;
+};
+
 type RecordMovementFormProps = {
 	/** When false, the card is not rendered (caller already checked `inventory.manage`). */
 	enabled: boolean;
+	/** Applied once when the form mounts (e.g. from balance detail deep link). */
+	prefill?: RecordMovementPrefill;
+	onPrefillApplied?: () => void;
 };
 
 /**
  * Posts to `/v1/inventory-movements` with the shape expected for each `kind`.
  * Receipt and adjustment use one location; transfer uses from/to locations.
  */
-export function RecordMovementForm({ enabled }: RecordMovementFormProps) {
+export function RecordMovementForm({
+	enabled,
+	prefill,
+	onPrefillApplied,
+}: RecordMovementFormProps) {
 	const queryClient = useQueryClient();
 	const locationsQuery = useQuery(locationsListQueryOptions());
 	const productsQuery = useQuery(productsListQueryOptions());
+	const prefillAppliedRef = useRef(false);
 
 	const [kind, setKind] = useState<InventoryMovementKind>("receipt");
 	const [locationId, setLocationId] = useState<string>("");
@@ -51,6 +65,27 @@ export function RecordMovementForm({ enabled }: RecordMovementFormProps) {
 	const [productId, setProductId] = useState<string>("");
 	const [quantity, setQuantity] = useState<string>("");
 	const [formError, setFormError] = useState<string | null>(null);
+
+	useEffect(() => {
+		if (!prefill || prefillAppliedRef.current) {
+			return;
+		}
+		prefillAppliedRef.current = true;
+		if (
+			prefill.kind === "receipt" ||
+			prefill.kind === "adjustment" ||
+			prefill.kind === "transfer"
+		) {
+			setKind(prefill.kind);
+		}
+		if (prefill.locationId) {
+			setLocationId(prefill.locationId);
+		}
+		if (prefill.productId) {
+			setProductId(prefill.productId);
+		}
+		onPrefillApplied?.();
+	}, [prefill, onPrefillApplied]);
 
 	const mutation = useMutation({
 		mutationFn: createInventoryMovement,

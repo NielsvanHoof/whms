@@ -2,11 +2,10 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { HTTPError } from "ky";
 import { Building2Icon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -28,32 +27,55 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
-import { createWarehouse } from "@/lib/api/warehouses";
-import type { components } from "@/lib/openapi/schema";
-import { warehouseQueryKeys } from "@/lib/queries/warehouses";
+import {
+	submitWarehouseForm,
+	type WarehouseFormSubmitContext,
+} from "@/components/warehouses/warehouse-form-submit";
+import {
+	createWarehouse,
+	type UpdateWarehouseRequestBody,
+	updateWarehouse,
+} from "@/lib/api/warehouses";
 import {
 	type WarehouseCreateFormValues,
 	warehouseCreateSchema,
 } from "@/lib/schemas/warehouse-create";
-import { toastApiError, toastSuccess } from "@/lib/toast";
 
-type ValidationBody =
-	components["responses"]["ValidationException"]["content"]["application/json"];
+type WarehouseFormProps = {
+	mode: "create" | "edit";
+	warehouseId?: number;
+	defaultValues?: Partial<WarehouseCreateFormValues>;
+};
 
-export function CreateWarehouseForm() {
+export function WarehouseForm({
+	mode,
+	warehouseId,
+	defaultValues,
+}: WarehouseFormProps) {
 	const router = useRouter();
 	const queryClient = useQueryClient();
 	const [formError, setFormError] = useState<string | null>(null);
 
 	const form = useForm<WarehouseCreateFormValues>({
 		resolver: zodResolver(warehouseCreateSchema),
-		defaultValues: { name: "", code: "" },
+		defaultValues: {
+			name: defaultValues?.name ?? "",
+			code: defaultValues?.code ?? "",
+		},
 		mode: "onSubmit",
 		reValidateMode: "onChange",
 	});
 
 	const createMutation = useMutation({
 		mutationFn: createWarehouse,
+	});
+	const updateMutation = useMutation({
+		mutationFn: (body: Omit<UpdateWarehouseRequestBody, "warehouse_id">) => {
+			if (!warehouseId) {
+				throw new Error("Missing warehouse id");
+			}
+			return updateWarehouse(warehouseId, body);
+		},
 	});
 
 	const {
@@ -64,6 +86,38 @@ export function CreateWarehouseForm() {
 		formState: { errors, isSubmitting },
 	} = form;
 
+	const submitCtx = useMemo<WarehouseFormSubmitContext>(
+		() => ({
+			mode,
+			warehouseId,
+			router,
+			queryClient,
+			createMutation,
+			updateMutation,
+			setFormError,
+			clearErrors,
+			setError,
+		}),
+		[
+			mode,
+			warehouseId,
+			router,
+			queryClient,
+			createMutation,
+			updateMutation,
+			clearErrors,
+			setError,
+		],
+	);
+
+	const onValidSubmit = useCallback(
+		(values: WarehouseCreateFormValues) =>
+			submitWarehouseForm(values, submitCtx),
+		[submitCtx],
+	);
+
+	const isCreate = mode === "create";
+
 	return (
 		<Card className="max-w-xl">
 			<CardHeader className="flex flex-col gap-3">
@@ -71,86 +125,23 @@ export function CreateWarehouseForm() {
 					<Building2Icon aria-hidden className="size-5" />
 				</div>
 				<div className="flex flex-col gap-1">
-					<CardTitle>Create warehouse</CardTitle>
+					<CardTitle>
+						{isCreate ? "Create warehouse" : "Edit warehouse"}
+					</CardTitle>
 					<CardDescription>
-						Add a new tenant warehouse location. Name is required.
+						{isCreate
+							? "Add a new tenant warehouse location. Name is required."
+							: "Update warehouse name or code."}
 					</CardDescription>
 				</div>
 			</CardHeader>
-			<form
-				noValidate
-				onSubmit={handleSubmit(async (values) => {
-					setFormError(null);
-					clearErrors(["name", "code"]);
-
-					try {
-						await createMutation.mutateAsync({
-							name: values.name,
-							code: values.code.trim().length ? values.code.trim() : null,
-						});
-						await queryClient.invalidateQueries({
-							queryKey: warehouseQueryKeys.all,
-						});
-						toastSuccess("Warehouse created");
-						router.push("/warehouses");
-						router.refresh();
-					} catch (err) {
-						if (err instanceof HTTPError && err.response.status === 422) {
-							const raw = err.data;
-							const body =
-								raw && typeof raw === "object"
-									? (raw as ValidationBody)
-									: undefined;
-
-							if (!body) {
-								setFormError("Could not create warehouse.");
-								return;
-							}
-
-							const apiErrors = body.errors;
-							if (apiErrors?.name?.[0]) {
-								setError("name", {
-									type: "server",
-									message: apiErrors.name[0],
-								});
-							}
-							if (apiErrors?.code?.[0]) {
-								setError("code", {
-									type: "server",
-									message: apiErrors.code[0],
-								});
-							}
-							if (!apiErrors?.name?.[0] && !apiErrors?.code?.[0]) {
-								setFormError(body.message ?? "Could not create warehouse.");
-							}
-							return;
-						}
-
-						if (err instanceof HTTPError) {
-							await toastApiError(
-								err,
-								`Could not create warehouse (${err.response.status}).`,
-							);
-							setFormError(
-								`Could not create warehouse (${err.response.status}). Try again.`,
-							);
-							return;
-						}
-
-						await toastApiError(
-							err,
-							"Network error. Check that the API is running and try again.",
-						);
-						setFormError(
-							"Network error. Check that the API is running and try again.",
-						);
-					}
-				})}
-			>
+			<form noValidate onSubmit={handleSubmit(onValidSubmit)}>
 				<CardContent className="flex flex-col gap-6">
 					{formError ? (
 						<Alert variant="destructive">
-							<AlertTitle>Create failed</AlertTitle>
+							<AlertTitle>
+								{isCreate ? "Create failed" : "Save failed"}
+							</AlertTitle>
 							<AlertDescription>{formError}</AlertDescription>
 						</Alert>
 					) : null}
@@ -190,7 +181,7 @@ export function CreateWarehouseForm() {
 						{isSubmitting ? (
 							<Spinner aria-hidden data-icon="inline-start" />
 						) : null}
-						Create warehouse
+						{isCreate ? "Create warehouse" : "Save changes"}
 					</Button>
 				</CardFooter>
 			</form>

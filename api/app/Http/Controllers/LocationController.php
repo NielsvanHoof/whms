@@ -30,7 +30,7 @@ final class LocationController extends Controller
             )
             ->allowedSorts('id', 'warehouse_id', 'code', 'type', 'created_at')
             ->defaultSort('-id')
-            ->paginate(15)
+            ->paginate(request()->input('per_page', 15))
             ->withQueryString();
 
         return LocationResource::collection($locations);

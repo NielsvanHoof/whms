@@ -15,6 +15,9 @@ final class MeController extends Controller
         /** @var \App\Models\User $user */
         $user = $request->user();
 
-        return new MeResource($user->loadMissing('roles:id,name'));
+        return new MeResource($user->loadMissing([
+            'roles:id,name',
+            'tenant:id,name,slug',
+        ]));
     }
 }

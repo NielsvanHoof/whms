@@ -5,8 +5,9 @@ import { useMemo } from "react";
 
 import type { WarehousesIndexQuery } from "@/lib/api/warehouses";
 
-import { parseAsOptionalString, parseAsSelectSort } from "./parsers";
+import { parseAsOptionalString } from "./parsers";
 import { useFilterDraft } from "./use-filter-draft";
+import { useListSortParser } from "./use-list-sort-parser";
 
 const warehouseSortValues = [
 	"id",
@@ -25,14 +26,18 @@ function isWarehouseSort(value: string): value is WarehouseSort {
 	return warehouseSortValues.includes(value as WarehouseSort);
 }
 
-const warehouseFilterParsers = {
-	"filter[name]": parseAsOptionalString,
-	"filter[code]": parseAsOptionalString,
-	sort: parseAsSelectSort,
-} as const;
-
 export function useWarehouseFilters() {
-	const [urlState, setUrlState] = useQueryStates(warehouseFilterParsers, {
+	const sortParser = useListSortParser("warehouses");
+	const filterParsers = useMemo(
+		() => ({
+			"filter[name]": parseAsOptionalString,
+			"filter[code]": parseAsOptionalString,
+			sort: sortParser,
+		}),
+		[sortParser],
+	);
+
+	const [urlState, setUrlState] = useQueryStates(filterParsers, {
 		history: "push",
 	});
 
@@ -77,6 +82,7 @@ export function useWarehouseFilters() {
 	};
 
 	return {
+		applied,
 		apiQuery,
 		applyFilters,
 		draft,

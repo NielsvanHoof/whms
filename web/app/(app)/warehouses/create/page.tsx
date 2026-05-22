@@ -2,7 +2,7 @@ import { ArrowLeftIcon } from "lucide-react";
 import Link from "next/link";
 import { PermissionGuard } from "@/components/auth/permission-guard";
 import { Button } from "@/components/ui/button";
-import { CreateWarehouseForm } from "@/components/warehouses/create-warehouse-form";
+import { WarehouseForm } from "@/components/warehouses/warehouse-form";
 import { PERMISSIONS } from "@/lib/permissions";
 
 export default function CreateWarehousePage() {
@@ -25,7 +25,7 @@ export default function CreateWarehousePage() {
 						</Link>
 					</Button>
 				</div>
-				<CreateWarehouseForm />
+				<WarehouseForm mode="create" />
 			</div>
 		</PermissionGuard>
 	);

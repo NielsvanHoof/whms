@@ -5,8 +5,9 @@ import { useMemo } from "react";
 
 import type { LocationsIndexQuery } from "@/lib/api/locations";
 
-import { parseAsOptionalString, parseAsSelectSort } from "./parsers";
+import { parseAsOptionalString } from "./parsers";
 import { useFilterDraft } from "./use-filter-draft";
+import { useListSortParser } from "./use-list-sort-parser";
 
 const locationSortValues = ["code", "-code", "type", "-type"] as const;
 
@@ -16,15 +17,19 @@ function isLocationSort(value: string): value is LocationSort {
 	return locationSortValues.includes(value as LocationSort);
 }
 
-const locationFilterParsers = {
-	"filter[code]": parseAsOptionalString,
-	"filter[type]": parseAsOptionalString,
-	"filter[warehouse_id]": parseAsOptionalString,
-	sort: parseAsSelectSort,
-} as const;
-
 export function useLocationFilters() {
-	const [urlState, setUrlState] = useQueryStates(locationFilterParsers, {
+	const sortParser = useListSortParser("locations");
+	const filterParsers = useMemo(
+		() => ({
+			"filter[code]": parseAsOptionalString,
+			"filter[type]": parseAsOptionalString,
+			"filter[warehouse_id]": parseAsOptionalString,
+			sort: sortParser,
+		}),
+		[sortParser],
+	);
+
+	const [urlState, setUrlState] = useQueryStates(filterParsers, {
 		history: "push",
 	});
 
@@ -75,6 +80,7 @@ export function useLocationFilters() {
 	};
 
 	return {
+		applied,
 		apiQuery,
 		applyFilters,
 		draft,

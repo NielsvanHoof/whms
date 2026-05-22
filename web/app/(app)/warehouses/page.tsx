@@ -1,23 +1,20 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { PlusIcon, SearchIcon, Trash2Icon } from "lucide-react";
+import { PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { DeleteConfirmDialog } from "@/components/confirm/delete-confirm-dialog";
+import { FilterControl } from "@/components/filters/filter-control";
+import { ListFilterBar } from "@/components/filters/list-filter-bar";
+import { ListPagination } from "@/components/filters/list-pagination";
+import { SortFilterSelect } from "@/components/filters/sort-filter-select";
 import { ErrorState } from "@/components/query/error-state";
 import { LoadingState } from "@/components/query/loading-state";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
 import {
 	Table,
 	TableBody,
@@ -29,6 +26,8 @@ import {
 import { useDelayedPending } from "@/hooks/use-delayed-pending";
 import { usePermissions } from "@/hooks/use-permissions";
 import { deleteWarehouse } from "@/lib/api/warehouses";
+import { filtersAreDirty, withPaginationParams } from "@/lib/nuqs/filter-utils";
+import { useListPage } from "@/lib/nuqs/use-list-page";
 import { useWarehouseFilters } from "@/lib/nuqs/warehouse-filters";
 import { canManageWarehouses, canViewWarehouses } from "@/lib/permissions";
 import {
@@ -62,8 +61,30 @@ export default function WarehousesPage() {
 	const queryClient = useQueryClient();
 	const permissions = usePermissions();
 	const [deletingId, setDeletingId] = useState<number | null>(null);
-	const { apiQuery, applyFilters, draft, resetFilters, setDraft } =
-		useWarehouseFilters();
+	const { goToPage, page, perPage, resetPage, setPerPage } = useListPage();
+	const {
+		applied,
+		apiQuery: filterQuery,
+		applyFilters: applyFiltersBase,
+		draft,
+		resetFilters: resetFiltersBase,
+		setDraft,
+	} = useWarehouseFilters();
+	const isDirty = filtersAreDirty(applied, draft);
+	const apiQuery = useMemo(
+		() => withPaginationParams(filterQuery, { page, perPage }),
+		[filterQuery, page, perPage],
+	);
+
+	const applyFilters = () => {
+		applyFiltersBase();
+		resetPage();
+	};
+
+	const resetFilters = () => {
+		resetFiltersBase();
+		resetPage();
+	};
 
 	const {
 		data: warehouses,
@@ -85,6 +106,7 @@ export default function WarehousesPage() {
 	const permList = permissions.permissions;
 	const canView = canViewWarehouses(permList);
 	const canCreate = canManageWarehouses(permList);
+	const canEdit = canManageWarehouses(permList);
 	const canDelete = canManageWarehouses(permList);
 
 	const deleteMutation = useMutation({
@@ -125,18 +147,14 @@ export default function WarehousesPage() {
 
 			{canView ? (
 				<Card>
-					<CardHeader>
-						<CardTitle>Filters</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<form
-							className="flex flex-col gap-3 md:flex-row md:items-end"
-							onSubmit={(event) => {
-								event.preventDefault();
-								applyFilters();
-							}}
-						>
+					<ListFilterBar
+						isDirty={isDirty}
+						onApply={applyFilters}
+						onReset={resetFilters}
+					>
+						<FilterControl label="Name">
 							<Input
+								className="w-full"
 								name="filter[name]"
 								onChange={(event) => {
 									setDraft((current) => ({
@@ -144,10 +162,13 @@ export default function WarehousesPage() {
 										name: event.target.value,
 									}));
 								}}
-								placeholder="Filter by warehouse name"
+								placeholder="Search by name"
 								value={draft.name}
 							/>
+						</FilterControl>
+						<FilterControl label="Code">
 							<Input
+								className="w-full"
 								name="filter[code]"
 								onChange={(event) => {
 									setDraft((current) => ({
@@ -155,42 +176,18 @@ export default function WarehousesPage() {
 										code: event.target.value,
 									}));
 								}}
-								placeholder="Filter by warehouse code"
+								placeholder="Search by code"
 								value={draft.code}
 							/>
-							<Select
-								onValueChange={(value) => {
-									setDraft((current) => ({ ...current, sort: value }));
-								}}
-								value={draft.sort}
-							>
-								<SelectTrigger className="w-full md:w-64">
-									<SelectValue placeholder="Sort warehouses" />
-								</SelectTrigger>
-								<SelectContent>
-									{sortOptions.map((option) => (
-										<SelectItem key={option.value} value={option.value}>
-											{option.label}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-							<div className="flex gap-2">
-								<Button type="submit" variant="default">
-									<SearchIcon data-icon="inline-start" />
-									Apply
-								</Button>
-								<Button onClick={resetFilters} type="button" variant="outline">
-									Reset
-								</Button>
-							</div>
-						</form>
-					</CardContent>
-				</Card>
-			) : null}
-
-			{canView ? (
-				<Card>
+						</FilterControl>
+						<SortFilterSelect
+							onValueChange={(value) => {
+								setDraft((current) => ({ ...current, sort: value }));
+							}}
+							options={sortOptions}
+							value={draft.sort}
+						/>
+					</ListFilterBar>
 					<CardContent className="pt-6">
 						{showPending && !warehouses ? (
 							<LoadingState
@@ -220,10 +217,13 @@ export default function WarehousesPage() {
 										</div>
 									</div>
 								) : null}
-								<div className="text-muted-foreground text-sm">
-									{warehouses?.meta.total ?? 0} warehouse
-									{(warehouses?.meta.total ?? 0) === 1 ? "" : "s"} found
-								</div>
+								<ListPagination
+									itemLabel="warehouse"
+									meta={warehouses.meta}
+									onPageChange={goToPage}
+									onPerPageChange={setPerPage}
+									perPage={perPage}
+								/>
 								<Table>
 									<TableHeader>
 										<TableRow>
@@ -231,7 +231,7 @@ export default function WarehousesPage() {
 											<TableHead>Name</TableHead>
 											<TableHead>Code</TableHead>
 											<TableHead>Created</TableHead>
-											{canDelete ? (
+											{canEdit || canDelete ? (
 												<TableHead className="text-right">Actions</TableHead>
 											) : null}
 										</TableRow>
@@ -248,49 +248,63 @@ export default function WarehousesPage() {
 													<TableCell>
 														{formatDate(warehouse.created_at)}
 													</TableCell>
-													{canDelete ? (
+													{canEdit || canDelete ? (
 														<TableCell className="text-right">
-															<DeleteConfirmDialog
-																description={
-																	<>
-																		This permanently removes{" "}
-																		<span className="font-medium text-foreground">
-																			{warehouse.name}
-																		</span>
-																		. Locations in this warehouse may block
-																		deletion.
-																	</>
-																}
-																isPending={
-																	deleteMutation.isPending &&
-																	deletingId === warehouse.id
-																}
-																onConfirm={async () => {
-																	setDeletingId(warehouse.id);
-																	try {
-																		await deleteMutation.mutateAsync(
-																			warehouse.id,
-																		);
-																	} finally {
-																		setDeletingId(null);
-																	}
-																}}
-																title="Delete warehouse?"
-																trigger={
-																	<Button
-																		disabled={
+															<div className="flex justify-end gap-2">
+																{canEdit ? (
+																	<Button asChild size="sm" variant="outline">
+																		<Link
+																			href={`/warehouses/${warehouse.id}/edit`}
+																		>
+																			<PencilIcon data-icon="inline-start" />
+																			Edit
+																		</Link>
+																	</Button>
+																) : null}
+																{canDelete ? (
+																	<DeleteConfirmDialog
+																		description={
+																			<>
+																				This permanently removes{" "}
+																				<span className="font-medium text-foreground">
+																					{warehouse.name}
+																				</span>
+																				. Locations in this warehouse may block
+																				deletion.
+																			</>
+																		}
+																		isPending={
 																			deleteMutation.isPending &&
 																			deletingId === warehouse.id
 																		}
-																		size="sm"
-																		type="button"
-																		variant="outline"
-																	>
-																		<Trash2Icon data-icon="inline-start" />
-																		Delete
-																	</Button>
-																}
-															/>
+																		onConfirm={async () => {
+																			setDeletingId(warehouse.id);
+																			try {
+																				await deleteMutation.mutateAsync(
+																					warehouse.id,
+																				);
+																			} finally {
+																				setDeletingId(null);
+																			}
+																		}}
+																		title="Delete warehouse?"
+																		trigger={
+																			<Button
+																				disabled={
+																					deleteMutation.isPending &&
+																					deletingId === warehouse.id
+																				}
+																				size="sm"
+																				type="button"
+																				variant="outline"
+																			>
+																				<Trash2Icon data-icon="inline-start" />
+																				Delete
+																			</Button>
+																		}
+																	/>
+																) : null}
+															</div>
 														</TableCell>
 													) : null}
 												</TableRow>
@@ -299,7 +313,7 @@ export default function WarehousesPage() {
 											<TableRow>
 												<TableCell
 													className="text-muted-foreground"
-													colSpan={canDelete ? 5 : 4}
+													colSpan={canEdit || canDelete ? 5 : 4}
 												>
 													No warehouses matched the current filters.
 												</TableCell>

@@ -1,3 +1,7 @@
+import {
+	appendListPage,
+	type ListPageQuery,
+} from "@/lib/api/list-query-params";
 import { createBrowserAuthedClient } from "@/lib/auth";
 import type { components, operations } from "@/lib/openapi/schema";
 
@@ -19,7 +23,9 @@ export type UpdateProductRequestBody =
 export type UpdateProductResponse =
 	operations["products.update"]["responses"]["200"]["content"]["application/json"];
 
-function toProductsSearchParams(query: ProductsIndexQuery): URLSearchParams {
+function toProductsSearchParams(
+	query: ProductsIndexQuery & ListPageQuery,
+): URLSearchParams {
 	const searchParams = new URLSearchParams();
 
 	if (query?.["filter[name]"]) {
@@ -39,12 +45,13 @@ function toProductsSearchParams(query: ProductsIndexQuery): URLSearchParams {
 			searchParams.append("sort[]", sortValue);
 		}
 	}
+	appendListPage(searchParams, query);
 
 	return searchParams;
 }
 
 export async function listProducts(
-	query: ProductsIndexQuery = {},
+	query: ProductsIndexQuery & ListPageQuery = {},
 ): Promise<ProductsIndexResponse> {
 	return createBrowserAuthedClient()
 		.get("api/v1/products", {

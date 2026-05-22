@@ -1,3 +1,7 @@
+import {
+	appendListPage,
+	type ListPageQuery,
+} from "@/lib/api/list-query-params";
 import { createBrowserAuthedClient } from "@/lib/auth";
 import type { components, operations } from "@/lib/openapi/schema";
 
@@ -9,9 +13,15 @@ export type CreateWarehouseRequestBody =
 	components["schemas"]["StoreWarehouseData"];
 export type CreateWarehouseResponse =
 	operations["warehouses.store"]["responses"]["200"]["content"]["application/json"];
+export type WarehouseShowResponse =
+	operations["warehouses.show"]["responses"]["200"]["content"]["application/json"];
+export type UpdateWarehouseRequestBody =
+	components["schemas"]["UpdateWarehouseData"];
+export type UpdateWarehouseResponse =
+	operations["warehouses.update"]["responses"]["200"]["content"]["application/json"];
 
 function toWarehousesSearchParams(
-	query: WarehousesIndexQuery,
+	query: WarehousesIndexQuery & ListPageQuery,
 ): URLSearchParams {
 	const searchParams = new URLSearchParams();
 
@@ -28,6 +38,7 @@ function toWarehousesSearchParams(
 			searchParams.append("sort[]", sortValue);
 		}
 	}
+	appendListPage(searchParams, query);
 
 	return searchParams;
 }
@@ -36,7 +47,7 @@ function toWarehousesSearchParams(
  * Fetches the current tenant's warehouses.
  */
 export async function listWarehouses(
-	query: WarehousesIndexQuery = {},
+	query: WarehousesIndexQuery & ListPageQuery = {},
 ): Promise<WarehousesIndexResponse> {
 	return createBrowserAuthedClient()
 		.get("api/v1/warehouses", {
@@ -54,6 +65,25 @@ export async function createWarehouse(
 	return createBrowserAuthedClient()
 		.post("api/v1/warehouses", { json: body })
 		.json<CreateWarehouseResponse>();
+}
+
+export async function showWarehouse(
+	warehouseId: number,
+): Promise<WarehouseShowResponse> {
+	return createBrowserAuthedClient()
+		.get(`api/v1/warehouses/${warehouseId}`)
+		.json<WarehouseShowResponse>();
+}
+
+export async function updateWarehouse(
+	warehouseId: number,
+	body: Omit<UpdateWarehouseRequestBody, "warehouse_id">,
+): Promise<UpdateWarehouseResponse> {
+	return createBrowserAuthedClient()
+		.put(`api/v1/warehouses/${warehouseId}`, {
+			json: { ...body, warehouse_id: warehouseId },
+		})
+		.json<UpdateWarehouseResponse>();
 }
 
 export async function deleteWarehouse(warehouseId: number): Promise<void> {

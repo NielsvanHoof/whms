@@ -1,15 +1,19 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { PencilIcon, PlusIcon, SearchIcon, Trash2Icon } from "lucide-react";
+import { PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { DeleteConfirmDialog } from "@/components/confirm/delete-confirm-dialog";
+import { FilterControl } from "@/components/filters/filter-control";
+import { ListFilterBar } from "@/components/filters/list-filter-bar";
+import { ListPagination } from "@/components/filters/list-pagination";
+import { SortFilterSelect } from "@/components/filters/sort-filter-select";
 import { ErrorState } from "@/components/query/error-state";
 import { LoadingState } from "@/components/query/loading-state";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
 	Select,
@@ -28,7 +32,9 @@ import {
 } from "@/components/ui/table";
 import { usePermissions } from "@/hooks/use-permissions";
 import { deleteProduct } from "@/lib/api/products";
+import { filtersAreDirty, withPaginationParams } from "@/lib/nuqs/filter-utils";
 import { useProductFilters } from "@/lib/nuqs/product-filters";
+import { useListPage } from "@/lib/nuqs/use-list-page";
 import { canManageProducts, canViewProducts } from "@/lib/permissions";
 import {
 	productQueryKeys,
@@ -48,7 +54,30 @@ export default function ProductsPage() {
 	const queryClient = useQueryClient();
 	const permissions = usePermissions();
 	const [deletingId, setDeletingId] = useState<number | null>(null);
-	const { apiQuery, applyFilters, draft, setDraft } = useProductFilters();
+	const { goToPage, page, perPage, resetPage, setPerPage } = useListPage();
+	const {
+		applied,
+		apiQuery: filterQuery,
+		applyFilters: applyFiltersBase,
+		draft,
+		resetFilters: resetFiltersBase,
+		setDraft,
+	} = useProductFilters();
+	const isDirty = filtersAreDirty(applied, draft);
+	const apiQuery = useMemo(
+		() => withPaginationParams(filterQuery, { page, perPage }),
+		[filterQuery, page, perPage],
+	);
+
+	const applyFilters = () => {
+		applyFiltersBase();
+		resetPage();
+	};
+
+	const resetFilters = () => {
+		resetFiltersBase();
+		resetPage();
+	};
 	const permList = permissions.permissions;
 	const canView = canViewProducts(permList);
 	const canCreate = canManageProducts(permList);
@@ -97,55 +126,59 @@ export default function ProductsPage() {
 
 			{canView ? (
 				<Card>
-					<CardHeader>
-						<CardTitle>Filters</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<form
-							className="flex flex-col gap-3 md:flex-row md:items-end"
-							onSubmit={(event) => {
-								event.preventDefault();
-								applyFilters();
-							}}
-						>
+					<ListFilterBar
+						isDirty={isDirty}
+						onApply={applyFilters}
+						onReset={resetFilters}
+					>
+						<FilterControl label="Name">
 							<Input
+								className="w-full"
 								onChange={(event) => {
 									setDraft((current) => ({
 										...current,
 										name: event.target.value,
 									}));
 								}}
-								placeholder="Name"
+								placeholder="Search by name"
 								value={draft.name}
 							/>
+						</FilterControl>
+						<FilterControl label="SKU">
 							<Input
+								className="w-full"
 								onChange={(event) => {
 									setDraft((current) => ({
 										...current,
 										sku: event.target.value,
 									}));
 								}}
-								placeholder="SKU"
+								placeholder="Search by SKU"
 								value={draft.sku}
 							/>
+						</FilterControl>
+						<FilterControl label="Unit">
 							<Input
+								className="w-full"
 								onChange={(event) => {
 									setDraft((current) => ({
 										...current,
 										unit: event.target.value,
 									}));
 								}}
-								placeholder="Unit"
+								placeholder="Search by unit"
 								value={draft.unit}
 							/>
+						</FilterControl>
+						<FilterControl label="Status">
 							<Select
 								onValueChange={(value) => {
 									setDraft((current) => ({ ...current, isActive: value }));
 								}}
 								value={draft.isActive}
 							>
-								<SelectTrigger className="w-full md:w-40">
-									<SelectValue />
+								<SelectTrigger className="w-full">
+									<SelectValue placeholder="Any status" />
 								</SelectTrigger>
 								<SelectContent>
 									<SelectItem value="all">All statuses</SelectItem>
@@ -153,34 +186,15 @@ export default function ProductsPage() {
 									<SelectItem value="0">Inactive</SelectItem>
 								</SelectContent>
 							</Select>
-							<Select
-								onValueChange={(value) => {
-									setDraft((current) => ({ ...current, sort: value }));
-								}}
-								value={draft.sort}
-							>
-								<SelectTrigger className="w-full md:w-48">
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent>
-									{sortOptions.map((option) => (
-										<SelectItem key={option.value} value={option.value}>
-											{option.label}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-							<Button type="submit">
-								<SearchIcon data-icon="inline-start" />
-								Apply
-							</Button>
-						</form>
-					</CardContent>
-				</Card>
-			) : null}
-
-			{canView ? (
-				<Card>
+						</FilterControl>
+						<SortFilterSelect
+							onValueChange={(value) => {
+								setDraft((current) => ({ ...current, sort: value }));
+							}}
+							options={sortOptions}
+							value={draft.sort}
+						/>
+					</ListFilterBar>
 					<CardContent className="pt-6">
 						{listQuery.isPending && !listQuery.data ? (
 							<LoadingState title="Loading products" />
@@ -200,6 +214,13 @@ export default function ProductsPage() {
 										</div>
 									</div>
 								) : null}
+								<ListPagination
+									itemLabel="product"
+									meta={listQuery.data.meta}
+									onPageChange={goToPage}
+									onPerPageChange={setPerPage}
+									perPage={perPage}
+								/>
 								<Table>
 									<TableHeader>
 										<TableRow>

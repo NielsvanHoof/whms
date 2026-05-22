@@ -16,6 +16,7 @@ final class MeResource extends JsonResource
     /**
      * @return array{
      *   user: UserResource,
+     *   tenant?: TenantResource,
      *   roles: list<string>,
      *   permissions: list<string>
      * }
@@ -34,6 +35,7 @@ final class MeResource extends JsonResource
 
         return [
             'user' => new UserResource($this->resource),
+            'tenant' => TenantResource::make($this->whenLoaded('tenant')),
             /** @var string[] */
             'roles' => $roles,
             /** @var string[] */

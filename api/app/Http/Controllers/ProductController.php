@@ -31,7 +31,7 @@ final class ProductController extends Controller
             )
             ->allowedSorts('id', 'sku', 'name', 'unit', 'is_active', 'created_at')
             ->defaultSort('-id')
-            ->paginate(15)
+            ->paginate(request()->input('per_page', 15))
             ->withQueryString();
 
         return ProductResource::collection($products);

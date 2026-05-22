@@ -5,12 +5,9 @@ import { useMemo } from "react";
 
 import type { InventoryMovementsIndexQuery } from "@/lib/api/inventory";
 
-import {
-	parseAsAllKindFilter,
-	parseAsOptionalString,
-	parseAsSelectSort,
-} from "./parsers";
+import { parseAsAllKindFilter, parseAsOptionalString } from "./parsers";
 import { useFilterDraft } from "./use-filter-draft";
+import { useListSortParser } from "./use-list-sort-parser";
 
 const movementSortValues = ["id", "-id", "created_at", "-created_at"] as const;
 
@@ -20,17 +17,21 @@ function isMovementSort(value: string): value is MovementSort {
 	return movementSortValues.includes(value as MovementSort);
 }
 
-const movementFilterParsers = {
-	"filter[warehouse_id]": parseAsOptionalString,
-	"filter[location_id]": parseAsOptionalString,
-	"filter[product_id]": parseAsOptionalString,
-	"filter[kind]": parseAsAllKindFilter,
-	"filter[transfer_correlation_id]": parseAsOptionalString,
-	sort: parseAsSelectSort,
-} as const;
-
 export function useInventoryMovementFilters() {
-	const [urlState, setUrlState] = useQueryStates(movementFilterParsers, {
+	const sortParser = useListSortParser("inventory_movements");
+	const filterParsers = useMemo(
+		() => ({
+			"filter[warehouse_id]": parseAsOptionalString,
+			"filter[location_id]": parseAsOptionalString,
+			"filter[product_id]": parseAsOptionalString,
+			"filter[kind]": parseAsAllKindFilter,
+			"filter[transfer_correlation_id]": parseAsOptionalString,
+			sort: sortParser,
+		}),
+		[sortParser],
+	);
+
+	const [urlState, setUrlState] = useQueryStates(filterParsers, {
 		history: "push",
 	});
 
@@ -93,9 +94,15 @@ export function useInventoryMovementFilters() {
 		});
 	};
 
+	const clearTransferFilter = () => {
+		void setUrlState({ "filter[transfer_correlation_id]": null });
+	};
+
 	return {
+		applied,
 		apiQuery,
 		applyFilters,
+		clearTransferFilter,
 		draft,
 		resetFilters,
 		setDraft,

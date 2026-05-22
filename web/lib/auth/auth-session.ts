@@ -11,6 +11,9 @@ import {
  */
 export const AUTH_SESSION_STORAGE_KEY = "warehouse_auth_session";
 
+/** Fired when session JSON is updated in-tab (e.g. profile name change). */
+export const AUTH_SESSION_CHANGED_EVENT = "warehouse-auth-session-changed";
+
 /** What we persist after login (matches API + optional legacy token-only row). */
 export type StoredAuthSession = {
 	token: string;
@@ -146,6 +149,23 @@ export function ensureAuthSessionCookieSynced(): void {
 	} else {
 		clearAuthSessionCookieClient();
 	}
+}
+
+/** Updates the cached user on the stored session (e.g. after profile save). */
+export function patchStoredAuthUser(user: AuthUser): void {
+	if (typeof window === "undefined") {
+		return;
+	}
+	const session = readStoredAuthSession();
+	if (!session) {
+		return;
+	}
+	window.localStorage.setItem(
+		AUTH_SESSION_STORAGE_KEY,
+		JSON.stringify({ ...session, user }),
+	);
+	window.dispatchEvent(new CustomEvent(AUTH_SESSION_CHANGED_EVENT));
+	setAuthSessionCookieClient();
 }
 
 /** Clears session storage and the routing marker cookie. */

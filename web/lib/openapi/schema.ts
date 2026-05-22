@@ -93,6 +93,39 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/inventory-movements/{inventoryMovement}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Single movement row including related warehouse, location, and product */
+        get: operations["inventoryMovement.show"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/account/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["account.listAccountSessions"];
+        put?: never;
+        post?: never;
+        delete: operations["account.revokeAllAccountSessions"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/locations": {
         parameters: {
             query?: never;
@@ -147,6 +180,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["auth.logout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me": {
         parameters: {
             query?: never;
@@ -195,6 +244,22 @@ export interface paths {
         post?: never;
         /** Remove the specified product */
         delete: operations["products.destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/account/sessions/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["account.revokeAccountSession"];
         options?: never;
         head?: never;
         patch?: never;
@@ -264,6 +329,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/account/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["account.updateAccountPassword"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/account/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["account.updateAccountProfile"];
+        trace?: never;
+    };
     "/v1/warehouses": {
         parameters: {
             query?: never;
@@ -324,12 +421,26 @@ export interface components {
             email: string;
             roles: unknown[];
         };
+        /** AccountSessionResource */
+        AccountSessionResource: {
+            id: number;
+            name: string;
+            is_current: string;
+            last_used_at: string;
+            created_at: string;
+        };
         /** AdjustmentInventoryMovementData */
         AdjustmentInventoryMovementData: {
             location_id: number;
             product_id: number;
             quantity: number;
             kind: components["schemas"]["InventoryMovementKind"];
+        };
+        /** ChangeAccountPasswordData */
+        ChangeAccountPasswordData: {
+            current_password: string;
+            password: string;
+            password_confirmation: string;
         };
         /** InventoryBalanceResource */
         InventoryBalanceResource: {
@@ -389,6 +500,7 @@ export interface components {
         /** MeResource */
         MeResource: {
             user: components["schemas"]["UserResource"];
+            tenant?: components["schemas"]["TenantResource"];
             roles: string[];
             permissions: string[];
         };
@@ -434,6 +546,12 @@ export interface components {
         SyncUserRolesData: {
             roles: string[];
         };
+        /** TenantResource */
+        TenantResource: {
+            id: number;
+            name: string;
+            slug: string;
+        };
         /** TransferInventoryMovementData */
         TransferInventoryMovementData: {
             from_location_id: number;
@@ -441,6 +559,10 @@ export interface components {
             product_id: number;
             quantity: number;
             kind: components["schemas"]["InventoryMovementKind"];
+        };
+        /** UpdateAccountProfileData */
+        UpdateAccountProfileData: {
+            name: string;
         };
         /** UpdateLocationData */
         UpdateLocationData: {
@@ -709,6 +831,76 @@ export interface operations {
             422: components["responses"]["ValidationException"];
         };
     };
+    "inventoryMovement.show": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The inventory movement ID */
+                inventoryMovement: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description `InventoryMovementResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["InventoryMovementResource"];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            404: components["responses"]["ModelNotFoundException"];
+        };
+    };
+    "account.listAccountSessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Array of `AccountSessionResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["AccountSessionResource"][];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+        };
+    };
+    "account.revokeAllAccountSessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["AuthenticationException"];
+        };
+    };
     "locations.index": {
         parameters: {
             query?: {
@@ -909,6 +1101,25 @@ export interface operations {
             422: components["responses"]["ValidationException"];
         };
     };
+    "auth.logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["AuthenticationException"];
+        };
+    };
     "auth.me": {
         parameters: {
             query?: never;
@@ -1103,6 +1314,27 @@ export interface operations {
             404: components["responses"]["ModelNotFoundException"];
         };
     };
+    "account.revokeAccountSession": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["AuthenticationException"];
+        };
+    };
     "roleManagement.roles": {
         parameters: {
             query?: never;
@@ -1202,6 +1434,60 @@ export interface operations {
             };
             401: components["responses"]["AuthenticationException"];
             404: components["responses"]["ModelNotFoundException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "account.updateAccountPassword": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description `ChangeAccountPasswordData` */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangeAccountPasswordData"];
+            };
+        };
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["AuthenticationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "account.updateAccountProfile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description `UpdateAccountProfileData` */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateAccountProfileData"];
+            };
+        };
+        responses: {
+            /** @description `MeResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["MeResource"];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
             422: components["responses"]["ValidationException"];
         };
     };

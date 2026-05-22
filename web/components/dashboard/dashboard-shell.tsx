@@ -26,6 +26,7 @@ import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/hooks/use-auth";
 import { usePermissions } from "@/hooks/use-permissions";
+import { signOut } from "@/lib/auth/sign-out";
 import {
 	canViewInventory,
 	canViewLocations,
@@ -63,9 +64,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 	const canOpenAdmin = canViewRoles(permList);
 
 	return (
-		<div className="flex min-h-full flex-1">
-			<aside className="flex w-56 shrink-0 flex-col border-r border-border bg-muted/30">
-				<div className="flex flex-col gap-1 border-b border-border px-4 py-4">
+		<div className="flex h-dvh overflow-hidden">
+			<aside className="flex h-full w-56 shrink-0 flex-col border-r border-border bg-muted/30">
+				<div className="flex shrink-0 flex-col gap-1 border-b border-border px-4 py-4">
 					<div className="flex items-center gap-2 font-medium">
 						<span className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
 							<WarehouseIcon aria-hidden className="size-4" />
@@ -73,7 +74,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 						<span className="truncate">Warehouse</span>
 					</div>
 				</div>
-				<nav className="flex flex-col gap-0.5 p-2">
+				<nav className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto p-2">
 					<Link
 						className={cn(
 							"rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted",
@@ -128,7 +129,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 						</Link>
 					) : null}
 				</nav>
-				<div className="mt-auto flex flex-col gap-2 p-2">
+				<div className="flex shrink-0 flex-col gap-2 p-2">
 					<Separator />
 					<DropdownMenu>
 						<DropdownMenuTrigger asChild>
@@ -168,9 +169,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 							<DropdownMenuSeparator />
 							<DropdownMenuItem
 								onClick={() => {
-									auth.logout();
-									router.replace("/login");
-									router.refresh();
+									void signOut(router);
 								}}
 							>
 								<LogOutIcon aria-hidden data-icon="inline-start" />
@@ -181,11 +180,11 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 				</div>
 			</aside>
 			<div className="flex min-h-0 min-w-0 flex-1 flex-col bg-background">
-				<div className="flex items-center justify-between gap-3 border-b border-border/80 px-6 py-3">
+				<div className="flex shrink-0 items-center justify-between gap-3 border-b border-border/80 px-6 py-3">
 					<AppBreadcrumbs />
 					<ModeToggle />
 				</div>
-				{children}
+				<main className="min-h-0 flex-1 overflow-y-auto">{children}</main>
 			</div>
 		</div>
 	);

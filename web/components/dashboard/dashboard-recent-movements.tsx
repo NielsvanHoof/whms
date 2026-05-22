@@ -16,21 +16,9 @@ import {
 } from "@/components/ui/card";
 import { canViewInventory } from "@/lib/permissions";
 import { inventoryMovementsListQueryOptions } from "@/lib/queries/inventory";
+import { formatWhen } from "@/lib/utils";
 
 const PREVIEW_LIMIT = 6;
-
-function formatWhen(value: string): string {
-	const date = new Date(value);
-	if (Number.isNaN(date.getTime())) {
-		return value;
-	}
-	return date.toLocaleString(undefined, {
-		month: "short",
-		day: "numeric",
-		hour: "2-digit",
-		minute: "2-digit",
-	});
-}
 
 function kindLabel(kind: string): string {
 	return kind.charAt(0).toUpperCase() + kind.slice(1);

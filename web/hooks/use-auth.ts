@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import {
+	AUTH_SESSION_CHANGED_EVENT,
 	AUTH_SESSION_STORAGE_KEY,
 	type AuthSnapshot,
 	logout as clearAuthSession,
@@ -67,7 +68,11 @@ export function useAuth(): UseAuthResult {
 		}
 
 		window.addEventListener("storage", onStorage);
-		return () => window.removeEventListener("storage", onStorage);
+		window.addEventListener(AUTH_SESSION_CHANGED_EVENT, refresh);
+		return () => {
+			window.removeEventListener("storage", onStorage);
+			window.removeEventListener(AUTH_SESSION_CHANGED_EVENT, refresh);
+		};
 	}, [refresh]);
 
 	if (snapshot === null) {

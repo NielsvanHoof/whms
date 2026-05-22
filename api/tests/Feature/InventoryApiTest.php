@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Models\InventoryBalance;
+use App\Models\InventoryMovement;
 use App\Models\Location;
 use App\Models\Product;
 use App\Models\Tenant;
@@ -34,6 +35,7 @@ final class InventoryApiTest extends TestCase
         $this->getJson('/api/v1/inventory-balances')->assertUnauthorized();
         $this->getJson('/api/v1/inventory-balances/1')->assertUnauthorized();
         $this->getJson('/api/v1/inventory-movements')->assertUnauthorized();
+        $this->getJson('/api/v1/inventory-movements/1')->assertUnauthorized();
         $this->postJson('/api/v1/inventory-movements', [])->assertUnauthorized();
     }
 
@@ -237,6 +239,95 @@ final class InventoryApiTest extends TestCase
 
         $this->getJson('/api/v1/inventory-balances/'.$balanceB->id)
             ->assertNotFound();
+    }
+
+    public function test_user_can_show_movement_with_related_resources(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $user = User::factory()->create(['tenant_id' => $tenant->id]);
+        $this->assignRole($user, 'manager');
+
+        $warehouse = Warehouse::factory()->create(['tenant_id' => $tenant->id]);
+        $location = Location::factory()->create([
+            'tenant_id' => $tenant->id,
+            'warehouse_id' => $warehouse->id,
+        ]);
+        $product = Product::factory()->create(['tenant_id' => $tenant->id]);
+
+        Sanctum::actingAs($user);
+
+        $movementId = $this->postJson('/api/v1/inventory-movements', [
+            'kind' => 'receipt',
+            'location_id' => $location->id,
+            'product_id' => $product->id,
+            'quantity' => 10,
+        ])->assertCreated()->json('data.0.id');
+
+        $this->getJson('/api/v1/inventory-movements/'.$movementId)
+            ->assertOk()
+            ->assertJsonPath('data.id', $movementId)
+            ->assertJsonPath('data.kind', 'receipt')
+            ->assertJsonPath('data.quantity_delta', 10)
+            ->assertJsonPath('data.warehouse.id', $warehouse->id)
+            ->assertJsonPath('data.location.id', $location->id)
+            ->assertJsonPath('data.product.id', $product->id);
+    }
+
+    public function test_user_cannot_show_movement_from_another_tenant(): void
+    {
+        $tenantA = Tenant::factory()->create();
+        $tenantB = Tenant::factory()->create();
+        $userA = User::factory()->create(['tenant_id' => $tenantA->id]);
+        $this->assignRole($userA, 'manager');
+
+        $warehouseB = Warehouse::factory()->create(['tenant_id' => $tenantB->id]);
+        $locationB = Location::factory()->create([
+            'tenant_id' => $tenantB->id,
+            'warehouse_id' => $warehouseB->id,
+        ]);
+        $productB = Product::factory()->create(['tenant_id' => $tenantB->id]);
+
+        $movementB = InventoryMovement::withoutGlobalScopes()->create([
+            'tenant_id' => $tenantB->id,
+            'kind' => 'receipt',
+            'warehouse_id' => $warehouseB->id,
+            'location_id' => $locationB->id,
+            'product_id' => $productB->id,
+            'quantity_delta' => 5,
+            'user_id' => User::factory()->create(['tenant_id' => $tenantB->id])->id,
+        ]);
+
+        Sanctum::actingAs($userA);
+
+        $this->getJson('/api/v1/inventory-movements/'.$movementB->id)
+            ->assertNotFound();
+    }
+
+    public function test_user_without_inventory_view_cannot_show_movement(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $user = User::factory()->create(['tenant_id' => $tenant->id]);
+        $user->givePermissionTo(Permission::findOrCreate('warehouses.view', 'web'));
+
+        $warehouse = Warehouse::factory()->create(['tenant_id' => $tenant->id]);
+        $location = Location::factory()->create([
+            'tenant_id' => $tenant->id,
+            'warehouse_id' => $warehouse->id,
+        ]);
+        $product = Product::factory()->create(['tenant_id' => $tenant->id]);
+
+        $movement = InventoryMovement::factory()->create([
+            'tenant_id' => $tenant->id,
+            'warehouse_id' => $warehouse->id,
+            'location_id' => $location->id,
+            'product_id' => $product->id,
+            'user_id' => $user->id,
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $this->getJson('/api/v1/inventory-movements/'.$movement->id)
+            ->assertForbidden();
     }
 
     public function test_user_without_inventory_view_cannot_list_balances(): void

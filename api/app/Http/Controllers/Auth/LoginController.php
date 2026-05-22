@@ -18,13 +18,14 @@ final class LoginController extends Controller
      */
     public function __invoke(LoginData $data): JsonResponse
     {
-        if (! Auth::attempt(['email' => $data->email, 'password' => $data->password])) {
+        if (! Auth::guard('web')->attempt(['email' => $data->email, 'password' => $data->password])) {
             throw ValidationException::withMessages([
                 'email' => [__('auth.failed')],
             ]);
         }
 
-        $user = Auth::user();
+        $user = Auth::guard('web')->user();
+        Auth::guard('web')->logout();
         $deviceName = $data->device_name ?? 'api';
 
         $plainTextToken = $user->createToken($deviceName)->plainTextToken;

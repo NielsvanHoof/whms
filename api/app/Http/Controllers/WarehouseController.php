@@ -29,7 +29,7 @@ final class WarehouseController extends Controller
             )
             ->allowedSorts('id', 'name', 'code', 'created_at')
             ->defaultSort('-id')
-            ->paginate(15)
+            ->paginate(request()->input('per_page', 15))
             ->withQueryString();
 
         return WarehouseResource::collection($warehouses);

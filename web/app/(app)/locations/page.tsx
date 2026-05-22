@@ -1,23 +1,21 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { PencilIcon, PlusIcon, SearchIcon, Trash2Icon } from "lucide-react";
+import { PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { DeleteConfirmDialog } from "@/components/confirm/delete-confirm-dialog";
+import { FilterControl } from "@/components/filters/filter-control";
+import { ListFilterBar } from "@/components/filters/list-filter-bar";
+import { ListPagination } from "@/components/filters/list-pagination";
+import { OptionalEntitySelect } from "@/components/filters/optional-entity-select";
+import { SortFilterSelect } from "@/components/filters/sort-filter-select";
 import { ErrorState } from "@/components/query/error-state";
 import { LoadingState } from "@/components/query/loading-state";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
 import {
 	Table,
 	TableBody,
@@ -26,14 +24,18 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { useDeferredQueryEnabled } from "@/hooks/use-deferred-query-enabled";
 import { usePermissions } from "@/hooks/use-permissions";
 import { deleteLocation } from "@/lib/api/locations";
+import { filtersAreDirty, withPaginationParams } from "@/lib/nuqs/filter-utils";
 import { useLocationFilters } from "@/lib/nuqs/location-filters";
+import { useListPage } from "@/lib/nuqs/use-list-page";
 import { canManageLocations, canViewLocations } from "@/lib/permissions";
 import {
 	locationQueryKeys,
 	locationsListQueryOptions,
 } from "@/lib/queries/locations";
+import { warehousesListQueryOptions } from "@/lib/queries/warehouses";
 import { toastApiError, toastSuccess } from "@/lib/toast";
 
 const sortOptions = [
@@ -48,17 +50,45 @@ export default function LocationsPage() {
 	const queryClient = useQueryClient();
 	const permissions = usePermissions();
 	const [deletingId, setDeletingId] = useState<number | null>(null);
-	const { apiQuery, applyFilters, draft, resetFilters, setDraft } =
-		useLocationFilters();
+	const { goToPage, page, perPage, resetPage, setPerPage } = useListPage();
+	const {
+		applied,
+		apiQuery: filterQuery,
+		applyFilters: applyFiltersBase,
+		draft,
+		resetFilters: resetFiltersBase,
+		setDraft,
+	} = useLocationFilters();
+	const isDirty = filtersAreDirty(applied, draft);
+	const apiQuery = useMemo(
+		() => withPaginationParams(filterQuery, { page, perPage }),
+		[filterQuery, page, perPage],
+	);
+
+	const applyFilters = () => {
+		applyFiltersBase();
+		resetPage();
+	};
+
+	const resetFilters = () => {
+		resetFiltersBase();
+		resetPage();
+	};
 	const permList = permissions.permissions;
 	const canView = canViewLocations(permList);
 	const canCreate = canManageLocations(permList);
 	const canEdit = canManageLocations(permList);
 	const canDelete = canManageLocations(permList);
 
+	const warehousesLoad = useDeferredQueryEnabled(Boolean(draft.warehouseId));
+
 	const listQuery = useQuery({
 		...locationsListQueryOptions(apiQuery),
 		placeholderData: (previousData) => previousData,
+	});
+	const warehousesQuery = useQuery({
+		...warehousesListQueryOptions({ sort: ["name"] }),
+		enabled: warehousesLoad.enabled,
 	});
 	const deleteMutation = useMutation({
 		mutationFn: deleteLocation,
@@ -98,80 +128,64 @@ export default function LocationsPage() {
 
 			{canView ? (
 				<Card>
-					<CardHeader>
-						<CardTitle>Filters</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<form
-							className="flex flex-col gap-3 md:flex-row md:items-end"
-							onSubmit={(event) => {
-								event.preventDefault();
-								applyFilters();
-							}}
-						>
+					<ListFilterBar
+						isDirty={isDirty}
+						onApply={applyFilters}
+						onReset={resetFilters}
+					>
+						<FilterControl label="Code">
 							<Input
+								className="w-full"
 								onChange={(event) => {
 									setDraft((current) => ({
 										...current,
 										code: event.target.value,
 									}));
 								}}
-								placeholder="Code"
+								placeholder="Search by code"
 								value={draft.code}
 							/>
+						</FilterControl>
+						<FilterControl label="Type">
 							<Input
+								className="w-full"
 								onChange={(event) => {
 									setDraft((current) => ({
 										...current,
 										type: event.target.value,
 									}));
 								}}
-								placeholder="Type"
+								placeholder="Search by type"
 								value={draft.type}
 							/>
-							<Input
-								onChange={(event) => {
-									setDraft((current) => ({
-										...current,
-										warehouseId: event.target.value,
-									}));
+						</FilterControl>
+						<FilterControl label="Warehouse">
+							<OptionalEntitySelect
+								allLabel="All warehouses"
+								disabled={warehousesQuery.isPending && warehousesLoad.enabled}
+								items={(warehousesQuery.data?.data ?? []).map((warehouse) => ({
+									value: String(warehouse.id),
+									label: warehouse.code
+										? `${warehouse.name} (${warehouse.code})`
+										: warehouse.name,
+								}))}
+								loading={warehousesQuery.isPending && warehousesLoad.enabled}
+								onOpenChange={warehousesLoad.onOpenChange}
+								onValueChange={(warehouseId) => {
+									setDraft((current) => ({ ...current, warehouseId }));
 								}}
-								placeholder="Warehouse ID"
+								placeholder="Any warehouse"
 								value={draft.warehouseId}
 							/>
-							<Select
-								onValueChange={(value) => {
-									setDraft((current) => ({ ...current, sort: value }));
-								}}
-								value={draft.sort}
-							>
-								<SelectTrigger className="w-full md:w-56">
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent>
-									{sortOptions.map((option) => (
-										<SelectItem key={option.value} value={option.value}>
-											{option.label}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-							<div className="flex gap-2">
-								<Button type="submit">
-									<SearchIcon data-icon="inline-start" />
-									Apply
-								</Button>
-								<Button onClick={resetFilters} type="button" variant="outline">
-									Reset
-								</Button>
-							</div>
-						</form>
-					</CardContent>
-				</Card>
-			) : null}
-
-			{canView ? (
-				<Card>
+						</FilterControl>
+						<SortFilterSelect
+							onValueChange={(value) => {
+								setDraft((current) => ({ ...current, sort: value }));
+							}}
+							options={sortOptions}
+							value={draft.sort}
+						/>
+					</ListFilterBar>
 					<CardContent className="pt-6">
 						{listQuery.isPending && !listQuery.data ? (
 							<LoadingState title="Loading locations" />
@@ -191,6 +205,13 @@ export default function LocationsPage() {
 										</div>
 									</div>
 								) : null}
+								<ListPagination
+									itemLabel="location"
+									meta={listQuery.data.meta}
+									onPageChange={goToPage}
+									onPerPageChange={setPerPage}
+									perPage={perPage}
+								/>
 								<Table>
 									<TableHeader>
 										<TableRow>

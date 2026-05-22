@@ -34,10 +34,22 @@ final class InventoryMovementController extends Controller
             )
             ->allowedSorts('id', 'created_at')
             ->defaultSort('-id')
-            ->paginate(15)
+            ->paginate(request()->input('per_page', 15))
             ->withQueryString();
 
         return InventoryMovementResource::collection($movements);
+    }
+
+    /**
+     * Single movement row including related warehouse, location, and product.
+     */
+    public function show(InventoryMovement $inventoryMovement): InventoryMovementResource
+    {
+        $this->authorize('view', $inventoryMovement);
+
+        $inventoryMovement->load(['warehouse', 'location', 'product']);
+
+        return new InventoryMovementResource($inventoryMovement);
     }
 
     /**
