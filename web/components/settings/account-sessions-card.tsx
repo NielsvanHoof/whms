@@ -1,13 +1,14 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { LogOutIcon } from "lucide-react";
+import { LogOutIcon, MonitorIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { DeleteConfirmDialog } from "@/components/confirm/delete-confirm-dialog";
 import { ErrorState } from "@/components/query/error-state";
 import { LoadingState } from "@/components/query/loading-state";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
 	Card,
@@ -17,6 +18,14 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import {
+	Empty,
+	EmptyDescription,
+	EmptyHeader,
+	EmptyMedia,
+	EmptyTitle,
+} from "@/components/ui/empty";
+import { Spinner } from "@/components/ui/spinner";
 import {
 	Table,
 	TableBody,
@@ -36,7 +45,7 @@ import {
 	accountSessionsQueryOptions,
 } from "@/lib/queries/account-sessions";
 import { toastApiError, toastSuccess } from "@/lib/toast";
-import { formatDateTime } from "@/lib/utils/format-date";
+import { formatDate } from "@/lib/utils";
 
 export function AccountSessionsCard() {
 	const router = useRouter();
@@ -128,7 +137,17 @@ export function AccountSessionsCard() {
 					/>
 				) : null}
 				{sessionsQuery.isSuccess && sessions.length === 0 ? (
-					<p className="text-muted-foreground text-sm">No active sessions.</p>
+					<Empty className="border px-4 py-8">
+						<EmptyHeader>
+							<EmptyMedia variant="icon">
+								<MonitorIcon aria-hidden />
+							</EmptyMedia>
+							<EmptyTitle>No active sessions</EmptyTitle>
+							<EmptyDescription>
+								No API tokens are currently active for this account.
+							</EmptyDescription>
+						</EmptyHeader>
+					</Empty>
 				) : null}
 				{sessionsQuery.isSuccess && sessions.length > 0 ? (
 					<div className="overflow-x-auto rounded-lg border border-border">
@@ -155,17 +174,15 @@ export function AccountSessionsCard() {
 														{session.name || "Unknown device"}
 													</span>
 													{isCurrent ? (
-														<span className="w-fit rounded-md border border-border bg-muted/50 px-2 py-0.5 text-muted-foreground text-xs">
-															This device
-														</span>
+														<Badge variant="secondary">This device</Badge>
 													) : null}
 												</div>
 											</TableCell>
 											<TableCell className="text-muted-foreground text-sm">
-												{formatDateTime(session.last_used_at)}
+												{formatDate(session.last_used_at)}
 											</TableCell>
 											<TableCell className="text-muted-foreground text-sm">
-												{formatDateTime(session.created_at)}
+												{formatDate(session.created_at)}
 											</TableCell>
 											<TableCell className="text-right">
 												<Button
@@ -181,7 +198,10 @@ export function AccountSessionsCard() {
 													type="button"
 													variant="outline"
 												>
-													{isRevoking ? "Revoking…" : "Revoke"}
+													{isRevoking ? (
+														<Spinner aria-hidden data-icon="inline-start" />
+													) : null}
+													{isRevoking ? "Revoking..." : "Revoke"}
 												</Button>
 											</TableCell>
 										</TableRow>

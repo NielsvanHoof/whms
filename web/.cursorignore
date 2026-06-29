@@ -1,0 +1,9 @@
+node_modules/**
+vendor/**
+dist/**
+.next/**
+coverage/**
+storage/logs/**
+docs/archive/**
+old/**
+legacy/**

@@ -1,17 +1,20 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { PlusIcon, WarehouseIcon } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
-import { DeleteConfirmDialog } from "@/components/confirm/delete-confirm-dialog";
 import { FilterControl } from "@/components/filters/filter-control";
 import { ListFilterBar } from "@/components/filters/list-filter-bar";
 import { ListPagination } from "@/components/filters/list-pagination";
 import { SortFilterSelect } from "@/components/filters/sort-filter-select";
+import { PageHeader } from "@/components/layout/page-header";
 import { ErrorState } from "@/components/query/error-state";
 import { LoadingState } from "@/components/query/loading-state";
+import { RefreshingIndicator } from "@/components/query/refreshing-indicator";
+import { TableEmptyState } from "@/components/query/table-empty-state";
+import { TableRowActions } from "@/components/table/table-row-actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -24,6 +27,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { useDelayedPending } from "@/hooks/use-delayed-pending";
+import { useDeleteRowMutation } from "@/hooks/use-delete-row-mutation";
 import { usePermissions } from "@/hooks/use-permissions";
 import { deleteWarehouse } from "@/lib/api/warehouses";
 import { filtersAreDirty, withPaginationParams } from "@/lib/nuqs/filter-utils";
@@ -34,11 +38,10 @@ import {
 	warehouseQueryKeys,
 	warehousesListQueryOptions,
 } from "@/lib/queries/warehouses";
-import { toastApiError, toastSuccess } from "@/lib/toast";
+import { formatDate } from "@/lib/utils";
 
 const sortOptions = [
 	{ value: "__default__", label: "Newest first (default)" },
-
 	{ value: "id", label: "ID ascending" },
 	{ value: "-id", label: "ID descending" },
 	{ value: "name", label: "Name A-Z" },
@@ -49,18 +52,8 @@ const sortOptions = [
 	{ value: "-created_at", label: "Newest first" },
 ] as const;
 
-function formatDate(value: string): string {
-	const date = new Date(value);
-	if (Number.isNaN(date.getTime())) {
-		return value;
-	}
-	return date.toLocaleString();
-}
-
 export default function WarehousesPage() {
-	const queryClient = useQueryClient();
 	const permissions = usePermissions();
-	const [deletingId, setDeletingId] = useState<number | null>(null);
 	const { goToPage, page, perPage, resetPage, setPerPage } = useListPage();
 	const {
 		applied,
@@ -109,35 +102,29 @@ export default function WarehousesPage() {
 	const canEdit = canManageWarehouses(permList);
 	const canDelete = canManageWarehouses(permList);
 
-	const deleteMutation = useMutation({
-		mutationFn: deleteWarehouse,
-		onSuccess: async () => {
-			await queryClient.invalidateQueries({ queryKey: warehouseQueryKeys.all });
-			toastSuccess("Warehouse deleted");
-		},
-		onError: (error) => {
-			void toastApiError(error, "Could not delete warehouse.");
-		},
+	const { deleteRow, isDeleting } = useDeleteRowMutation({
+		deleteFn: deleteWarehouse,
+		invalidateQueryKey: warehouseQueryKeys.all,
+		successMessage: "Warehouse deleted",
+		errorMessage: "Could not delete warehouse.",
 	});
 
 	return (
 		<div className="flex flex-col gap-6 p-6">
-			<div className="flex flex-col gap-2">
-				<h1 className="font-semibold text-2xl tracking-tight">Warehouses</h1>
-				<p className="text-muted-foreground text-sm">
-					Browse tenant warehouses and filter by name or code.
-				</p>
-				{canCreate ? (
-					<div>
+			<PageHeader
+				action={
+					canCreate ? (
 						<Button asChild size="sm" variant="outline">
 							<Link href="/warehouses/create">
 								<PlusIcon data-icon="inline-start" />
 								Create warehouse
 							</Link>
 						</Button>
-					</div>
-				) : null}
-			</div>
+					) : null
+				}
+				description="Browse tenant warehouses and filter by name or code."
+				title="Warehouses"
+			/>
 			{!canView ? (
 				<ErrorState
 					description="You do not have permission to view warehouses."
@@ -210,13 +197,7 @@ export default function WarehousesPage() {
 
 						{!isError && warehouses ? (
 							<div className="relative flex flex-col gap-3">
-								{isFetching && !showPending ? (
-									<div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-center">
-										<div className="rounded-md border border-border bg-background/95 px-3 py-1 text-muted-foreground text-xs shadow-xs">
-											Refreshing table...
-										</div>
-									</div>
-								) : null}
+								{isFetching && !showPending ? <RefreshingIndicator /> : null}
 								<ListPagination
 									itemLabel="warehouse"
 									meta={warehouses.meta}
@@ -237,12 +218,17 @@ export default function WarehousesPage() {
 										</TableRow>
 									</TableHeader>
 									<TableBody>
-										{warehouses?.data.length ? (
+										{warehouses.data.length ? (
 											warehouses.data.map((warehouse) => (
 												<TableRow key={warehouse.id}>
 													<TableCell>{warehouse.id}</TableCell>
 													<TableCell className="font-medium">
-														{warehouse.name}
+														<Link
+															className="hover:underline"
+															href={`/warehouses/${warehouse.id}`}
+														>
+															{warehouse.name}
+														</Link>
 													</TableCell>
 													<TableCell>{warehouse.code ?? "-"}</TableCell>
 													<TableCell>
@@ -250,74 +236,35 @@ export default function WarehousesPage() {
 													</TableCell>
 													{canEdit || canDelete ? (
 														<TableCell className="text-right">
-															<div className="flex justify-end gap-2">
-																{canEdit ? (
-																	<Button asChild size="sm" variant="outline">
-																		<Link
-																			href={`/warehouses/${warehouse.id}/edit`}
-																		>
-																			<PencilIcon data-icon="inline-start" />
-																			Edit
-																		</Link>
-																	</Button>
-																) : null}
-																{canDelete ? (
-																	<DeleteConfirmDialog
-																		description={
-																			<>
-																				This permanently removes{" "}
-																				<span className="font-medium text-foreground">
-																					{warehouse.name}
-																				</span>
-																				. Locations in this warehouse may block
-																				deletion.
-																			</>
-																		}
-																		isPending={
-																			deleteMutation.isPending &&
-																			deletingId === warehouse.id
-																		}
-																		onConfirm={async () => {
-																			setDeletingId(warehouse.id);
-																			try {
-																				await deleteMutation.mutateAsync(
-																					warehouse.id,
-																				);
-																			} finally {
-																				setDeletingId(null);
-																			}
-																		}}
-																		title="Delete warehouse?"
-																		trigger={
-																			<Button
-																				disabled={
-																					deleteMutation.isPending &&
-																					deletingId === warehouse.id
-																				}
-																				size="sm"
-																				type="button"
-																				variant="outline"
-																			>
-																				<Trash2Icon data-icon="inline-start" />
-																				Delete
-																			</Button>
-																		}
-																	/>
-																) : null}
-															</div>
+															<TableRowActions
+																canDelete={canDelete}
+																canEdit={canEdit}
+																deleteDescription={
+																	<>
+																		This permanently removes{" "}
+																		<span className="font-medium text-foreground">
+																			{warehouse.name}
+																		</span>
+																		. Locations in this warehouse may block
+																		deletion.
+																	</>
+																}
+																deleteTitle="Delete warehouse?"
+																editHref={`/warehouses/${warehouse.id}/edit`}
+																isDeletePending={isDeleting(warehouse.id)}
+																onDelete={() => deleteRow(warehouse.id)}
+															/>
 														</TableCell>
 													) : null}
 												</TableRow>
 											))
 										) : (
-											<TableRow>
-												<TableCell
-													className="text-muted-foreground"
-													colSpan={canEdit || canDelete ? 5 : 4}
-												>
-													No warehouses matched the current filters.
-												</TableCell>
-											</TableRow>
+											<TableEmptyState
+												colSpan={canEdit || canDelete ? 5 : 4}
+												description="Try adjusting the filters or create the first warehouse for this tenant."
+												icon={WarehouseIcon}
+												title="No warehouses found"
+											/>
 										)}
 									</TableBody>
 								</Table>

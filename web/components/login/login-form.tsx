@@ -82,7 +82,7 @@ export function LoginForm({ className }: { className?: string }) {
 						</CardDescription>
 					</div>
 				</CardHeader>
-				<form noValidate onSubmit={handleSubmit(onValidSubmit)}>
+				<form method="post" noValidate onSubmit={handleSubmit(onValidSubmit)}>
 					<CardContent className="flex flex-col gap-6">
 						{formError ? (
 							<Alert variant="destructive">

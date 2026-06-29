@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { PackageSearchIcon } from "lucide-react";
 import Link from "next/link";
 import { useMemo } from "react";
 
@@ -10,6 +11,8 @@ import { SortFilterSelect } from "@/components/filters/sort-filter-select";
 import { InventoryEntityFilters } from "@/components/inventory/inventory-entity-filters";
 import { ErrorState } from "@/components/query/error-state";
 import { LoadingState } from "@/components/query/loading-state";
+import { RefreshingIndicator } from "@/components/query/refreshing-indicator";
+import { TableEmptyState } from "@/components/query/table-empty-state";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -114,7 +117,10 @@ export default function InventoryBalancesPage() {
 						/>
 					) : null}
 					{listQuery.data ? (
-						<div className="flex flex-col gap-3">
+						<div className="relative flex flex-col gap-3">
+							{listQuery.isFetching && !showPending ? (
+								<RefreshingIndicator />
+							) : null}
 							<ListPagination
 								itemLabel="balance"
 								meta={listQuery.data.meta}
@@ -161,11 +167,12 @@ export default function InventoryBalancesPage() {
 											</TableRow>
 										))
 									) : (
-										<TableRow>
-											<TableCell className="text-muted-foreground" colSpan={5}>
-												No balances for the current filters.
-											</TableCell>
-										</TableRow>
+										<TableEmptyState
+											colSpan={5}
+											description="Try adjusting the filters or record a receipt to create stock."
+											icon={PackageSearchIcon}
+											title="No balances found"
+										/>
 									)}
 								</TableBody>
 							</Table>

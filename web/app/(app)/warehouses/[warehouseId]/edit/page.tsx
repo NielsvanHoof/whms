@@ -40,9 +40,9 @@ export default function EditWarehousePage({
 						</p>
 					</div>
 					<Button asChild variant="outline">
-						<Link href="/warehouses">
+						<Link href={`/warehouses/${warehouseId}`}>
 							<ArrowLeftIcon data-icon="inline-start" />
-							Back to list
+							Back to warehouse
 						</Link>
 					</Button>
 				</div>

@@ -1,17 +1,21 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { PackageSearchIcon, PlusIcon } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
-import { DeleteConfirmDialog } from "@/components/confirm/delete-confirm-dialog";
 import { FilterControl } from "@/components/filters/filter-control";
 import { ListFilterBar } from "@/components/filters/list-filter-bar";
 import { ListPagination } from "@/components/filters/list-pagination";
 import { SortFilterSelect } from "@/components/filters/sort-filter-select";
+import { PageHeader } from "@/components/layout/page-header";
 import { ErrorState } from "@/components/query/error-state";
 import { LoadingState } from "@/components/query/loading-state";
+import { RefreshingIndicator } from "@/components/query/refreshing-indicator";
+import { TableEmptyState } from "@/components/query/table-empty-state";
+import { TableRowActions } from "@/components/table/table-row-actions";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -30,6 +34,8 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { useDelayedPending } from "@/hooks/use-delayed-pending";
+import { useDeleteRowMutation } from "@/hooks/use-delete-row-mutation";
 import { usePermissions } from "@/hooks/use-permissions";
 import { deleteProduct } from "@/lib/api/products";
 import { filtersAreDirty, withPaginationParams } from "@/lib/nuqs/filter-utils";
@@ -40,7 +46,6 @@ import {
 	productQueryKeys,
 	productsListQueryOptions,
 } from "@/lib/queries/products";
-import { toastApiError, toastSuccess } from "@/lib/toast";
 
 const sortOptions = [
 	{ value: "__default__", label: "Newest first" },
@@ -51,9 +56,7 @@ const sortOptions = [
 ] as const;
 
 export default function ProductsPage() {
-	const queryClient = useQueryClient();
 	const permissions = usePermissions();
-	const [deletingId, setDeletingId] = useState<number | null>(null);
 	const { goToPage, page, perPage, resetPage, setPerPage } = useListPage();
 	const {
 		applied,
@@ -78,6 +81,7 @@ export default function ProductsPage() {
 		resetFiltersBase();
 		resetPage();
 	};
+
 	const permList = permissions.permissions;
 	const canView = canViewProducts(permList);
 	const canCreate = canManageProducts(permList);
@@ -88,35 +92,35 @@ export default function ProductsPage() {
 		...productsListQueryOptions(apiQuery),
 		placeholderData: (previousData) => previousData,
 	});
-	const deleteMutation = useMutation({
-		mutationFn: deleteProduct,
-		onSuccess: async () => {
-			await queryClient.invalidateQueries({ queryKey: productQueryKeys.all });
-			toastSuccess("Product deleted");
-		},
-		onError: (error) => {
-			void toastApiError(error, "Could not delete product.");
-		},
+
+	const showPending = useDelayedPending(listQuery.isPending, {
+		delayMs: 120,
+		minVisibleMs: 220,
+	});
+
+	const { deleteRow, isDeleting } = useDeleteRowMutation({
+		deleteFn: deleteProduct,
+		invalidateQueryKey: productQueryKeys.all,
+		successMessage: "Product deleted",
+		errorMessage: "Could not delete product.",
 	});
 
 	return (
 		<div className="flex flex-col gap-6 p-6">
-			<div className="flex items-end justify-between gap-3">
-				<div className="flex flex-col gap-2">
-					<h1 className="font-semibold text-2xl tracking-tight">Products</h1>
-					<p className="text-muted-foreground text-sm">
-						Manage product master data.
-					</p>
-				</div>
-				{canCreate ? (
-					<Button asChild variant="outline">
-						<Link href="/products/create">
-							<PlusIcon data-icon="inline-start" />
-							Create product
-						</Link>
-					</Button>
-				) : null}
-			</div>
+			<PageHeader
+				action={
+					canCreate ? (
+						<Button asChild size="sm" variant="outline">
+							<Link href="/products/create">
+								<PlusIcon data-icon="inline-start" />
+								Create product
+							</Link>
+						</Button>
+					) : null
+				}
+				description="Manage product master data."
+				title="Products"
+			/>
 			{!canView ? (
 				<ErrorState
 					description="You do not have permission to view products."
@@ -196,23 +200,23 @@ export default function ProductsPage() {
 						/>
 					</ListFilterBar>
 					<CardContent className="pt-6">
-						{listQuery.isPending && !listQuery.data ? (
+						{showPending && !listQuery.data ? (
 							<LoadingState title="Loading products" />
 						) : null}
 						{listQuery.isError ? (
 							<ErrorState
 								error={listQuery.error}
+								isRetrying={listQuery.isFetching && !showPending}
+								onRetry={() => {
+									void listQuery.refetch();
+								}}
 								title="Could not load products"
 							/>
 						) : null}
 						{listQuery.data ? (
 							<div className="relative flex flex-col gap-3">
-								{listQuery.isFetching && !listQuery.isPending ? (
-									<div className="absolute inset-x-0 top-0 flex justify-center">
-										<div className="rounded-md border bg-background/95 px-3 py-1 text-xs text-muted-foreground">
-											Refreshing table...
-										</div>
-									</div>
+								{listQuery.isFetching && !showPending ? (
+									<RefreshingIndicator />
 								) : null}
 								<ListPagination
 									itemLabel="product"
@@ -235,74 +239,61 @@ export default function ProductsPage() {
 										</TableRow>
 									</TableHeader>
 									<TableBody>
-										{listQuery.data.data.map((product) => (
-											<TableRow key={product.id}>
-												<TableCell>{product.id}</TableCell>
-												<TableCell>{product.sku}</TableCell>
-												<TableCell>{product.name}</TableCell>
-												<TableCell>{product.unit}</TableCell>
-												<TableCell>
-													{product.is_active ? "Active" : "Inactive"}
-												</TableCell>
-												{canEdit || canDelete ? (
-													<TableCell className="text-right">
-														<div className="flex justify-end gap-2">
-															{canEdit ? (
-																<Button asChild size="sm" variant="outline">
-																	<Link href={`/products/${product.id}/edit`}>
-																		<PencilIcon data-icon="inline-start" />
-																		Edit
-																	</Link>
-																</Button>
-															) : null}
-															{canDelete ? (
-																<DeleteConfirmDialog
-																	description={
-																		<>
-																			This permanently removes{" "}
-																			<span className="font-medium text-foreground">
-																				{product.name}
-																			</span>{" "}
-																			({product.sku}). This action cannot be
-																			undone.
-																		</>
-																	}
-																	isPending={
-																		deleteMutation.isPending &&
-																		deletingId === product.id
-																	}
-																	onConfirm={async () => {
-																		setDeletingId(product.id);
-																		try {
-																			await deleteMutation.mutateAsync(
-																				product.id,
-																			);
-																		} finally {
-																			setDeletingId(null);
-																		}
-																	}}
-																	title="Delete product?"
-																	trigger={
-																		<Button
-																			disabled={
-																				deleteMutation.isPending &&
-																				deletingId === product.id
-																			}
-																			size="sm"
-																			type="button"
-																			variant="outline"
-																		>
-																			<Trash2Icon data-icon="inline-start" />
-																			Delete
-																		</Button>
-																	}
-																/>
-															) : null}
-														</div>
+										{listQuery.data.data.length ? (
+											listQuery.data.data.map((product) => (
+												<TableRow key={product.id}>
+													<TableCell>{product.id}</TableCell>
+													<TableCell>{product.sku}</TableCell>
+													<TableCell className="font-medium">
+														<Link
+															className="hover:underline"
+															href={`/products/${product.id}`}
+														>
+															{product.name}
+														</Link>
 													</TableCell>
-												) : null}
-											</TableRow>
-										))}
+													<TableCell>{product.unit}</TableCell>
+													<TableCell>
+														<Badge
+															variant={
+																product.is_active ? "secondary" : "outline"
+															}
+														>
+															{product.is_active ? "Active" : "Inactive"}
+														</Badge>
+													</TableCell>
+													{canEdit || canDelete ? (
+														<TableCell className="text-right">
+															<TableRowActions
+																canDelete={canDelete}
+																canEdit={canEdit}
+																deleteDescription={
+																	<>
+																		This permanently removes{" "}
+																		<span className="font-medium text-foreground">
+																			{product.name}
+																		</span>{" "}
+																		({product.sku}). This action cannot be
+																		undone.
+																	</>
+																}
+																deleteTitle="Delete product?"
+																editHref={`/products/${product.id}/edit`}
+																isDeletePending={isDeleting(product.id)}
+																onDelete={() => deleteRow(product.id)}
+															/>
+														</TableCell>
+													) : null}
+												</TableRow>
+											))
+										) : (
+											<TableEmptyState
+												colSpan={canEdit || canDelete ? 6 : 5}
+												description="Try adjusting the filters or create a product before recording inventory."
+												icon={PackageSearchIcon}
+												title="No products found"
+											/>
+										)}
 									</TableBody>
 								</Table>
 							</div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { ArrowLeftRightIcon } from "lucide-react";
 import Link from "next/link";
 import { useMemo } from "react";
 
@@ -16,6 +17,9 @@ import {
 import { TransferFilterBanner } from "@/components/inventory/transfer-filter-banner";
 import { ErrorState } from "@/components/query/error-state";
 import { LoadingState } from "@/components/query/loading-state";
+import { RefreshingIndicator } from "@/components/query/refreshing-indicator";
+import { TableEmptyState } from "@/components/query/table-empty-state";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -62,6 +66,33 @@ const kindFilterOptions = [
 	{ value: "adjustment", label: "Adjustment" },
 	{ value: "transfer", label: "Transfer" },
 ] as const;
+
+function kindLabel(kind: string): string {
+	if (kind === "receipt") return "Receipt";
+	if (kind === "adjustment") return "Adjustment";
+	if (kind === "transfer") return "Transfer";
+	return kind;
+}
+
+function movementKindVariant(
+	kind: string,
+): "default" | "outline" | "secondary" {
+	if (kind === "receipt") return "secondary";
+	if (kind === "transfer") return "outline";
+	return "default";
+}
+
+function quantityDeltaLabel(delta: number): string {
+	return `${delta > 0 ? "+" : ""}${delta}`;
+}
+
+function quantityDeltaVariant(
+	delta: number,
+): "destructive" | "outline" | "secondary" {
+	if (delta < 0) return "destructive";
+	if (delta > 0) return "secondary";
+	return "outline";
+}
 
 export default function InventoryMovementsPage() {
 	const { permissions: permissionList } = usePermissions();
@@ -201,7 +232,10 @@ export default function InventoryMovementsPage() {
 						/>
 					) : null}
 					{listQuery.data ? (
-						<div className="flex flex-col gap-3">
+						<div className="relative flex flex-col gap-3">
+							{listQuery.isFetching && !showPending ? (
+								<RefreshingIndicator />
+							) : null}
 							<ListPagination
 								itemLabel="movement"
 								meta={listQuery.data.meta}
@@ -238,7 +272,11 @@ export default function InventoryMovementsPage() {
 													<TableCell className="whitespace-nowrap text-muted-foreground text-xs">
 														{formatDate(row.created_at)}
 													</TableCell>
-													<TableCell>{row.kind}</TableCell>
+													<TableCell>
+														<Badge variant={movementKindVariant(row.kind)}>
+															{kindLabel(row.kind)}
+														</Badge>
+													</TableCell>
 													<TableCell>
 														{row.warehouse?.name ?? row.warehouse_id}
 													</TableCell>
@@ -250,8 +288,13 @@ export default function InventoryMovementsPage() {
 															? `${row.product.sku}`
 															: row.product_id}
 													</TableCell>
-													<TableCell className="text-right font-medium tabular-nums">
-														{row.quantity_delta}
+													<TableCell className="text-right">
+														<Badge
+															className="ml-auto tabular-nums"
+															variant={quantityDeltaVariant(row.quantity_delta)}
+														>
+															{quantityDeltaLabel(row.quantity_delta)}
+														</Badge>
 													</TableCell>
 													<TableCell className="text-xs">
 														{row.transfer_correlation_id ? (
@@ -271,14 +314,12 @@ export default function InventoryMovementsPage() {
 												</TableRow>
 											))
 										) : (
-											<TableRow>
-												<TableCell
-													className="text-muted-foreground"
-													colSpan={8}
-												>
-													No movements for the current filters.
-												</TableCell>
-											</TableRow>
+											<TableEmptyState
+												colSpan={8}
+												description="Try adjusting the filters or record a receipt, adjustment, or transfer."
+												icon={ArrowLeftRightIcon}
+												title="No movements found"
+											/>
 										)}
 									</TableBody>
 								</Table>

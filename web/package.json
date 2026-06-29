@@ -12,7 +12,9 @@
 		"format:fix": "biome format . --write",
 		"ci": "biome ci",
 		"generate:api": "openapi-typescript http://127.0.0.1:8000/docs/api.json -o lib/openapi/schema.ts",
-		"type-check": "tsc --noEmit"
+		"type-check": "tsc --noEmit",
+		"test:e2e": "playwright test",
+		"test:e2e:ui": "playwright test --ui"
 	},
 	"dependencies": {
 		"@hookform/resolvers": "^5.2.2",
@@ -37,6 +39,7 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.4.14",
+		"@playwright/test": "^1.61.0",
 		"@tailwindcss/postcss": "^4",
 		"@types/node": "^20",
 		"@types/react": "^19",

@@ -1,18 +1,21 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { MapPinIcon, PlusIcon } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
-import { DeleteConfirmDialog } from "@/components/confirm/delete-confirm-dialog";
 import { FilterControl } from "@/components/filters/filter-control";
 import { ListFilterBar } from "@/components/filters/list-filter-bar";
 import { ListPagination } from "@/components/filters/list-pagination";
 import { OptionalEntitySelect } from "@/components/filters/optional-entity-select";
 import { SortFilterSelect } from "@/components/filters/sort-filter-select";
+import { PageHeader } from "@/components/layout/page-header";
 import { ErrorState } from "@/components/query/error-state";
 import { LoadingState } from "@/components/query/loading-state";
+import { RefreshingIndicator } from "@/components/query/refreshing-indicator";
+import { TableEmptyState } from "@/components/query/table-empty-state";
+import { TableRowActions } from "@/components/table/table-row-actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -25,6 +28,8 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { useDeferredQueryEnabled } from "@/hooks/use-deferred-query-enabled";
+import { useDelayedPending } from "@/hooks/use-delayed-pending";
+import { useDeleteRowMutation } from "@/hooks/use-delete-row-mutation";
 import { usePermissions } from "@/hooks/use-permissions";
 import { deleteLocation } from "@/lib/api/locations";
 import { filtersAreDirty, withPaginationParams } from "@/lib/nuqs/filter-utils";
@@ -36,7 +41,6 @@ import {
 	locationsListQueryOptions,
 } from "@/lib/queries/locations";
 import { warehousesListQueryOptions } from "@/lib/queries/warehouses";
-import { toastApiError, toastSuccess } from "@/lib/toast";
 
 const sortOptions = [
 	{ value: "__default__", label: "Newest first" },
@@ -47,9 +51,7 @@ const sortOptions = [
 ] as const;
 
 export default function LocationsPage() {
-	const queryClient = useQueryClient();
 	const permissions = usePermissions();
-	const [deletingId, setDeletingId] = useState<number | null>(null);
 	const { goToPage, page, perPage, resetPage, setPerPage } = useListPage();
 	const {
 		applied,
@@ -74,6 +76,7 @@ export default function LocationsPage() {
 		resetFiltersBase();
 		resetPage();
 	};
+
 	const permList = permissions.permissions;
 	const canView = canViewLocations(permList);
 	const canCreate = canManageLocations(permList);
@@ -90,35 +93,35 @@ export default function LocationsPage() {
 		...warehousesListQueryOptions({ sort: ["name"] }),
 		enabled: warehousesLoad.enabled,
 	});
-	const deleteMutation = useMutation({
-		mutationFn: deleteLocation,
-		onSuccess: async () => {
-			await queryClient.invalidateQueries({ queryKey: locationQueryKeys.all });
-			toastSuccess("Location deleted");
-		},
-		onError: (error) => {
-			void toastApiError(error, "Could not delete location.");
-		},
+
+	const showPending = useDelayedPending(listQuery.isPending, {
+		delayMs: 120,
+		minVisibleMs: 220,
+	});
+
+	const { deleteRow, isDeleting } = useDeleteRowMutation({
+		deleteFn: deleteLocation,
+		invalidateQueryKey: locationQueryKeys.all,
+		successMessage: "Location deleted",
+		errorMessage: "Could not delete location.",
 	});
 
 	return (
 		<div className="flex flex-col gap-6 p-6">
-			<div className="flex items-end justify-between gap-3">
-				<div className="flex flex-col gap-2">
-					<h1 className="font-semibold text-2xl tracking-tight">Locations</h1>
-					<p className="text-muted-foreground text-sm">
-						Manage storage locations.
-					</p>
-				</div>
-				{canCreate ? (
-					<Button asChild variant="outline">
-						<Link href="/locations/create">
-							<PlusIcon data-icon="inline-start" />
-							Create location
-						</Link>
-					</Button>
-				) : null}
-			</div>
+			<PageHeader
+				action={
+					canCreate ? (
+						<Button asChild size="sm" variant="outline">
+							<Link href="/locations/create">
+								<PlusIcon data-icon="inline-start" />
+								Create location
+							</Link>
+						</Button>
+					) : null
+				}
+				description="Manage storage locations."
+				title="Locations"
+			/>
 			{!canView ? (
 				<ErrorState
 					description="You do not have permission to view locations."
@@ -187,23 +190,23 @@ export default function LocationsPage() {
 						/>
 					</ListFilterBar>
 					<CardContent className="pt-6">
-						{listQuery.isPending && !listQuery.data ? (
+						{showPending && !listQuery.data ? (
 							<LoadingState title="Loading locations" />
 						) : null}
 						{listQuery.isError ? (
 							<ErrorState
 								error={listQuery.error}
+								isRetrying={listQuery.isFetching && !showPending}
+								onRetry={() => {
+									void listQuery.refetch();
+								}}
 								title="Could not load locations"
 							/>
 						) : null}
 						{listQuery.data ? (
 							<div className="relative flex flex-col gap-3">
-								{listQuery.isFetching && !listQuery.isPending ? (
-									<div className="absolute inset-x-0 top-0 flex justify-center">
-										<div className="rounded-md border bg-background/95 px-3 py-1 text-xs text-muted-foreground">
-											Refreshing table...
-										</div>
-									</div>
+								{listQuery.isFetching && !showPending ? (
+									<RefreshingIndicator />
 								) : null}
 								<ListPagination
 									itemLabel="location"
@@ -225,73 +228,59 @@ export default function LocationsPage() {
 										</TableRow>
 									</TableHeader>
 									<TableBody>
-										{listQuery.data.data.map((location) => (
-											<TableRow key={location.id}>
-												<TableCell>{location.id}</TableCell>
-												<TableCell>
-													{location.warehouse_code || location.warehouse_id}
-												</TableCell>
-												<TableCell>{location.code}</TableCell>
-												<TableCell>{location.type}</TableCell>
-												{canEdit || canDelete ? (
-													<TableCell className="text-right">
-														<div className="flex justify-end gap-2">
-															{canEdit ? (
-																<Button asChild size="sm" variant="outline">
-																	<Link href={`/locations/${location.id}/edit`}>
-																		<PencilIcon data-icon="inline-start" />
-																		Edit
-																	</Link>
-																</Button>
-															) : null}
-															{canDelete ? (
-																<DeleteConfirmDialog
-																	description={
-																		<>
-																			This permanently removes location{" "}
-																			<span className="font-medium text-foreground">
-																				{location.code}
-																			</span>
-																			. Stock or references tied to this
-																			location may block deletion.
-																		</>
-																	}
-																	isPending={
-																		deleteMutation.isPending &&
-																		deletingId === location.id
-																	}
-																	onConfirm={async () => {
-																		setDeletingId(location.id);
-																		try {
-																			await deleteMutation.mutateAsync(
-																				location.id,
-																			);
-																		} finally {
-																			setDeletingId(null);
-																		}
-																	}}
-																	title="Delete location?"
-																	trigger={
-																		<Button
-																			disabled={
-																				deleteMutation.isPending &&
-																				deletingId === location.id
-																			}
-																			size="sm"
-																			type="button"
-																			variant="outline"
-																		>
-																			<Trash2Icon data-icon="inline-start" />
-																			Delete
-																		</Button>
-																	}
-																/>
-															) : null}
-														</div>
+										{listQuery.data.data.length ? (
+											listQuery.data.data.map((location) => (
+												<TableRow key={location.id}>
+													<TableCell>{location.id}</TableCell>
+													<TableCell>
+														<Link
+															className="hover:underline"
+															href={`/warehouses/${location.warehouse_id}`}
+														>
+															{location.warehouse_code || location.warehouse_id}
+														</Link>
 													</TableCell>
-												) : null}
-											</TableRow>
-										))}
+													<TableCell className="font-medium">
+														<Link
+															className="hover:underline"
+															href={`/locations/${location.id}`}
+														>
+															{location.code}
+														</Link>
+													</TableCell>
+													<TableCell>{location.type}</TableCell>
+													{canEdit || canDelete ? (
+														<TableCell className="text-right">
+															<TableRowActions
+																canDelete={canDelete}
+																canEdit={canEdit}
+																deleteDescription={
+																	<>
+																		This permanently removes location{" "}
+																		<span className="font-medium text-foreground">
+																			{location.code}
+																		</span>
+																		. Stock or references tied to this location
+																		may block deletion.
+																	</>
+																}
+																deleteTitle="Delete location?"
+																editHref={`/locations/${location.id}/edit`}
+																isDeletePending={isDeleting(location.id)}
+																onDelete={() => deleteRow(location.id)}
+															/>
+														</TableCell>
+													) : null}
+												</TableRow>
+											))
+										) : (
+											<TableEmptyState
+												colSpan={canEdit || canDelete ? 5 : 4}
+												description="Try adjusting the filters or create a storage location."
+												icon={MapPinIcon}
+												title="No locations found"
+											/>
+										)}
 									</TableBody>
 								</Table>
 							</div>

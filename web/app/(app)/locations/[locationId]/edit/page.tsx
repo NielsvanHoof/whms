@@ -40,9 +40,9 @@ export default function EditLocationPage({
 						</p>
 					</div>
 					<Button asChild variant="outline">
-						<Link href="/locations">
+						<Link href={`/locations/${locationId}`}>
 							<ArrowLeftIcon data-icon="inline-start" />
-							Back to list
+							Back to location
 						</Link>
 					</Button>
 				</div>

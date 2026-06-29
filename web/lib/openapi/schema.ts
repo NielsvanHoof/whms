@@ -434,7 +434,7 @@ export interface components {
             location_id: number;
             product_id: number;
             quantity: number;
-            kind: components["schemas"]["InventoryMovementKind"];
+            kind: string;
         };
         /** ChangeAccountPasswordData */
         ChangeAccountPasswordData: {
@@ -456,12 +456,6 @@ export interface components {
             created_at: string;
             updated_at: string;
         };
-        /**
-         * InventoryMovementKind
-         * @description Describes how stock should change for a single inventory movement request. Receipts add stock. Adjustments apply a signed delta (cycle counts, corrections). Transfers move units between two locations in one atomic transaction.
-         * @enum {string}
-         */
-        InventoryMovementKind: "receipt" | "adjustment" | "transfer";
         /** InventoryMovementResource */
         InventoryMovementResource: {
             id: number;
@@ -520,7 +514,7 @@ export interface components {
             location_id: number;
             product_id: number;
             quantity: number;
-            kind: components["schemas"]["InventoryMovementKind"];
+            kind: string;
         };
         /** StoreInventoryMovementData */
         StoreInventoryMovementData: components["schemas"]["ReceiptInventoryMovementData"] | components["schemas"]["AdjustmentInventoryMovementData"] | components["schemas"]["TransferInventoryMovementData"];
@@ -558,7 +552,7 @@ export interface components {
             to_location_id: number;
             product_id: number;
             quantity: number;
-            kind: components["schemas"]["InventoryMovementKind"];
+            kind: string;
         };
         /** UpdateAccountProfileData */
         UpdateAccountProfileData: {

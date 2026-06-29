@@ -27,6 +27,8 @@ function labelForNumericSegment(
 	switch (parentSegment) {
 		case "balances":
 			return `Balance ${segment}`;
+		case "warehouses":
+			return `Warehouse ${segment}`;
 		case "locations":
 			return `Location ${segment}`;
 		case "products":
@@ -49,15 +51,23 @@ function labelForSegment(
 	);
 }
 
-/** Numeric balance IDs have a dedicated show route; other IDs are usually edit-only. */
+/** Numeric IDs with dedicated show routes link to their detail page. */
 function hrefForNumericSegment(
 	segment: string,
 	parentSegment: string | undefined,
 ): string | undefined {
-	if (parentSegment === "balances") {
-		return `/inventory/balances/${segment}`;
+	switch (parentSegment) {
+		case "balances":
+			return `/inventory/balances/${segment}`;
+		case "warehouses":
+			return `/warehouses/${segment}`;
+		case "locations":
+			return `/locations/${segment}`;
+		case "products":
+			return `/products/${segment}`;
+		default:
+			return undefined;
 	}
-	return undefined;
 }
 
 /**

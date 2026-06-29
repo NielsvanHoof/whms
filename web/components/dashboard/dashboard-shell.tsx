@@ -3,6 +3,7 @@
 import {
 	ChevronsUpDownIcon,
 	LogOutIcon,
+	MenuIcon,
 	SettingsIcon,
 	ShieldIcon,
 	WarehouseIcon,
@@ -62,10 +63,61 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 	const showProductsNav = canViewProducts(permList);
 	const showInventoryNav = canViewInventory(permList);
 	const canOpenAdmin = canViewRoles(permList);
+	const navItems = [
+		{
+			href: "/dashboard",
+			label: "Overview",
+			active: pathname === "/dashboard",
+			show: true,
+		},
+		{
+			href: "/warehouses",
+			label: "Warehouses",
+			active: pathname.startsWith("/warehouses"),
+			show: showWarehousesNav,
+		},
+		{
+			href: "/locations",
+			label: "Locations",
+			active: pathname.startsWith("/locations"),
+			show: showLocationsNav,
+		},
+		{
+			href: "/products",
+			label: "Products",
+			active: pathname.startsWith("/products"),
+			show: showProductsNav,
+		},
+	].filter((item) => item.show);
+
+	const inventoryNavItems = [
+		{
+			href: "/inventory/balances",
+			label: "Balances",
+			active:
+				pathname === "/inventory/balances" ||
+				pathname.startsWith("/inventory/balances/"),
+		},
+		{
+			href: "/inventory/movements",
+			label: "Movements",
+			active:
+				pathname === "/inventory/movements" ||
+				pathname.startsWith("/inventory/movements/"),
+		},
+	];
+
+	// Flat list for the mobile menu dropdown.
+	const mobileNavItems = [
+		...navItems,
+		...(showInventoryNav
+			? inventoryNavItems.map((item) => ({ ...item, show: true }))
+			: []),
+	];
 
 	return (
 		<div className="flex h-dvh overflow-hidden">
-			<aside className="flex h-full w-56 shrink-0 flex-col border-r border-border bg-muted/30">
+			<aside className="hidden h-full w-56 shrink-0 flex-col border-r border-border bg-muted/30 md:flex">
 				<div className="flex shrink-0 flex-col gap-1 border-b border-border px-4 py-4">
 					<div className="flex items-center gap-2 font-medium">
 						<span className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
@@ -75,58 +127,36 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 					</div>
 				</div>
 				<nav className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto p-2">
-					<Link
-						className={cn(
-							"rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted",
-							pathname === "/dashboard" && "bg-muted font-medium",
-						)}
-						href="/dashboard"
-					>
-						Overview
-					</Link>
-					{showWarehousesNav ? (
+					{navItems.map((item) => (
 						<Link
+							key={item.href}
 							className={cn(
 								"rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted",
-								pathname.startsWith("/warehouses") && "bg-muted font-medium",
+								item.active && "bg-muted font-medium",
 							)}
-							href="/warehouses"
+							href={item.href}
 						>
-							Warehouses
+							{item.label}
 						</Link>
-					) : null}
-					{showLocationsNav ? (
-						<Link
-							className={cn(
-								"rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted",
-								pathname.startsWith("/locations") && "bg-muted font-medium",
-							)}
-							href="/locations"
-						>
-							Locations
-						</Link>
-					) : null}
-					{showProductsNav ? (
-						<Link
-							className={cn(
-								"rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted",
-								pathname.startsWith("/products") && "bg-muted font-medium",
-							)}
-							href="/products"
-						>
-							Products
-						</Link>
-					) : null}
+					))}
 					{showInventoryNav ? (
-						<Link
-							className={cn(
-								"flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted",
-								pathname.startsWith("/inventory") && "bg-muted font-medium",
-							)}
-							href="/inventory/balances"
-						>
-							Inventory
-						</Link>
+						<div className="mt-2 flex flex-col gap-0.5">
+							<p className="px-3 py-1.5 text-muted-foreground text-xs font-medium uppercase tracking-wide">
+								Inventory
+							</p>
+							{inventoryNavItems.map((item) => (
+								<Link
+									key={item.href}
+									className={cn(
+										"rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted",
+										item.active && "bg-muted font-medium",
+									)}
+									href={item.href}
+								>
+									{item.label}
+								</Link>
+							))}
+						</div>
 					) : null}
 				</nav>
 				<div className="flex shrink-0 flex-col gap-2 p-2">
@@ -180,8 +210,78 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 				</div>
 			</aside>
 			<div className="flex min-h-0 min-w-0 flex-1 flex-col bg-background">
-				<div className="flex shrink-0 items-center justify-between gap-3 border-b border-border/80 px-6 py-3">
-					<AppBreadcrumbs />
+				<div className="flex shrink-0 items-center justify-between gap-3 border-b border-border/80 px-4 py-3 md:px-6">
+					<div className="flex min-w-0 items-center gap-3">
+						<DropdownMenu>
+							<DropdownMenuTrigger asChild>
+								<Button
+									className="md:hidden"
+									size="sm"
+									type="button"
+									variant="outline"
+								>
+									<MenuIcon aria-hidden data-icon="inline-start" />
+									Menu
+								</Button>
+							</DropdownMenuTrigger>
+							<DropdownMenuContent align="start" className="w-56">
+								<DropdownMenuLabel>Navigation</DropdownMenuLabel>
+								<DropdownMenuSeparator />
+								{mobileNavItems.map((item) => (
+									<DropdownMenuItem asChild key={item.href}>
+										<Link
+											className={cn(item.active && "font-medium")}
+											href={item.href}
+										>
+											{item.label}
+										</Link>
+									</DropdownMenuItem>
+								))}
+								<DropdownMenuSeparator />
+								<DropdownMenuLabel>
+									<div className="flex flex-col">
+										<span className="truncate font-medium">{user.name}</span>
+										<span className="truncate text-muted-foreground text-xs">
+											{user.email}
+										</span>
+									</div>
+								</DropdownMenuLabel>
+								<DropdownMenuSeparator />
+								<DropdownMenuItem asChild>
+									<Link href="/settings">
+										<SettingsIcon aria-hidden data-icon="inline-start" />
+										Settings
+									</Link>
+								</DropdownMenuItem>
+								{canOpenAdmin ? (
+									<DropdownMenuItem asChild>
+										<Link href="/admin">
+											<ShieldIcon aria-hidden data-icon="inline-start" />
+											Administration
+										</Link>
+									</DropdownMenuItem>
+								) : null}
+								<DropdownMenuSeparator />
+								<DropdownMenuItem
+									onClick={() => {
+										void signOut(router);
+									}}
+								>
+									<LogOutIcon aria-hidden data-icon="inline-start" />
+									Sign out
+								</DropdownMenuItem>
+							</DropdownMenuContent>
+						</DropdownMenu>
+						<div className="hidden min-w-0 md:block">
+							<AppBreadcrumbs />
+						</div>
+						<div className="flex min-w-0 items-center gap-2 md:hidden">
+							<span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground">
+								<WarehouseIcon aria-hidden />
+							</span>
+							<span className="truncate font-medium text-sm">Warehouse</span>
+						</div>
+					</div>
 					<ModeToggle />
 				</div>
 				<main className="min-h-0 flex-1 overflow-y-auto">{children}</main>

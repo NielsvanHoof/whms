@@ -11,6 +11,7 @@ import { ChangePasswordForm } from "@/components/settings/change-password-form";
 import { SettingsNav } from "@/components/settings/settings-nav";
 import { UserPreferencesForm } from "@/components/settings/user-preferences-form";
 import { ModeToggle } from "@/components/theme/mode-toggle";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
 	Card,
@@ -31,11 +32,8 @@ function RoleList({ roles }: { roles: string[] }) {
 	return (
 		<ul className="flex flex-wrap gap-2">
 			{roles.map((role) => (
-				<li
-					key={role}
-					className="rounded-md border border-border bg-muted/50 px-2.5 py-1 font-medium text-sm"
-				>
-					{role}
+				<li key={role}>
+					<Badge variant="secondary">{role}</Badge>
 				</li>
 			))}
 		</ul>

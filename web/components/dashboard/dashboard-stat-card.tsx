@@ -2,7 +2,6 @@ import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
 
 import { ErrorState } from "@/components/query/error-state";
-import { LoadingState } from "@/components/query/loading-state";
 import {
 	Card,
 	CardContent,
@@ -10,6 +9,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 type DashboardStatCardProps = {
@@ -63,10 +63,10 @@ export function DashboardStatCard({
 			</CardHeader>
 			<CardContent className="min-h-[4.5rem]">
 				{isLoading ? (
-					<LoadingState
-						className="py-2"
-						title={`Loading ${title.toLowerCase()}`}
-					/>
+					<div className="flex flex-col gap-3 py-1">
+						<Skeleton className="h-8 w-20" />
+						<Skeleton className="h-3 w-32" />
+					</div>
 				) : null}
 				{isError ? (
 					<ErrorState

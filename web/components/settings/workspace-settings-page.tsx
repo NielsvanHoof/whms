@@ -15,6 +15,8 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { usePermissions } from "@/hooks/use-permissions";
 import { canViewRoles } from "@/lib/permissions";
 import { meQueryOptions } from "@/lib/queries/me";
@@ -50,50 +52,77 @@ export function WorkspaceSettingsPage() {
 
 			<Card className="max-w-2xl">
 				<CardHeader>
-					<CardTitle>Workspace</CardTitle>
+					<CardTitle>General</CardTitle>
 					<CardDescription>
-						Tenant-level configuration for your organization. This is separate
-						from your personal account settings.
+						Basic workspace identity. Editing requires tenant admin APIs that
+						are not available yet.
 					</CardDescription>
 				</CardHeader>
-				<CardContent className="flex flex-col gap-6">
+				<CardContent className="flex flex-col gap-4">
 					{tenant ? (
-						<dl className="grid gap-4 sm:grid-cols-2">
-							<div className="flex flex-col gap-1">
-								<dt className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
-									Name
-								</dt>
-								<dd className="text-sm">{tenant.name}</dd>
+						<>
+							<div className="flex flex-col gap-2">
+								<Label htmlFor="workspace-name">Workspace name</Label>
+								<Input
+									disabled
+									id="workspace-name"
+									readOnly
+									value={tenant.name}
+								/>
 							</div>
-							<div className="flex flex-col gap-1">
-								<dt className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
-									Slug
-								</dt>
-								<dd className="font-mono text-sm">{tenant.slug}</dd>
+							<div className="flex flex-col gap-2">
+								<Label htmlFor="workspace-slug">Slug</Label>
+								<Input
+									className="font-mono"
+									disabled
+									id="workspace-slug"
+									readOnly
+									value={tenant.slug}
+								/>
 							</div>
-						</dl>
+						</>
 					) : (
 						<p className="text-muted-foreground text-sm">
 							No workspace is linked to your account.
 						</p>
 					)}
-
-					<p className="text-muted-foreground text-sm leading-relaxed">
-						Workspace-wide settings (defaults, branding, policies) will appear
-						here when tenant admin APIs are available. User and role management
-						lives under Administration.
-					</p>
-
-					{canOpenAdmin ? (
-						<Button asChild className="w-fit" size="sm" variant="outline">
-							<Link href="/admin">
-								<ShieldIcon aria-hidden data-icon="inline-start" />
-								Open Administration
-							</Link>
-						</Button>
-					) : null}
 				</CardContent>
 			</Card>
+
+			<Card className="max-w-2xl opacity-80">
+				<CardHeader>
+					<CardTitle>Branding</CardTitle>
+					<CardDescription>
+						Logo and visual identity settings will be editable here once tenant
+						admin APIs are available.
+					</CardDescription>
+				</CardHeader>
+				<CardContent>
+					<p className="text-muted-foreground text-sm">Coming soon.</p>
+				</CardContent>
+			</Card>
+
+			<Card className="max-w-2xl opacity-80">
+				<CardHeader>
+					<CardTitle>Policies</CardTitle>
+					<CardDescription>
+						Workspace defaults and policy toggles will be configurable here once
+						tenant admin APIs are available.
+					</CardDescription>
+				</CardHeader>
+				<CardContent>
+					<p className="text-muted-foreground text-sm">Coming soon.</p>
+				</CardContent>
+			</Card>
+
+			{canOpenAdmin ? (
+				<Button asChild className="w-fit" size="sm" variant="outline">
+					<Link href="/admin">
+						<ShieldIcon aria-hidden data-icon="inline-start" />
+						Open Administration
+					</Link>
+				</Button>
+			) : null}
 		</div>
 	);
 }

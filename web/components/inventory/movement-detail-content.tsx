@@ -32,7 +32,7 @@ import {
 	inventoryMovementDetailQueryOptions,
 	transferMovementsQueryOptions,
 } from "@/lib/queries/inventory";
-import { formatDateTime } from "@/lib/utils/format-date";
+import { formatDate } from "@/lib/utils";
 
 type InventoryMovement = components["schemas"]["InventoryMovementResource"];
 
@@ -133,7 +133,7 @@ function RelatedTransferTable({
 								{row.quantity_delta}
 							</TableCell>
 							<TableCell className="text-muted-foreground text-xs whitespace-nowrap">
-								{formatDateTime(row.created_at)}
+								{formatDate(row.created_at)}
 							</TableCell>
 						</TableRow>
 					))}
@@ -188,8 +188,7 @@ export function MovementDetailContent({
 						<CardHeader>
 							<CardTitle>Movement #{movement.id}</CardTitle>
 							<CardDescription>
-								{kindLabel(movement.kind)} ·{" "}
-								{formatDateTime(movement.created_at)}
+								{kindLabel(movement.kind)} · {formatDate(movement.created_at)}
 							</CardDescription>
 						</CardHeader>
 						<CardContent className="flex flex-col gap-6">
