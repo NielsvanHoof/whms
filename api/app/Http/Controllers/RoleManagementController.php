@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Data\Access\StoreAccessUserData;
 use App\Data\Access\SyncUserRolesData;
 use App\Http\Resources\AccessPermissionResource;
 use App\Http\Resources\AccessRoleResource;
 use App\Http\Resources\AccessUserResource;
 use App\Models\Tenant;
 use App\Models\User;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -56,6 +58,24 @@ final class RoleManagementController extends Controller
             ->get(['id', 'tenant_id', 'name', 'email']);
 
         return AccessUserResource::collection($users);
+    }
+
+    public function store(StoreAccessUserData $data, Request $request): JsonResponse
+    {
+        $this->ensureCanManageRoles($request->user());
+
+        $user = User::query()->create([
+            'tenant_id' => Tenant::current()->getKey(),
+            'name' => $data->name,
+            'email' => $data->email,
+            'password' => $data->password,
+        ]);
+
+        $user->syncRoles($data->roles);
+
+        return (new AccessUserResource($user->load('roles:id,name')))
+            ->response()
+            ->setStatusCode(201);
     }
 
     public function syncUserRoles(SyncUserRolesData $data, Request $request, User $user): JsonResource

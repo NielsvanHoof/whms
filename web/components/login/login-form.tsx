@@ -2,6 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { WarehouseIcon } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -114,7 +115,13 @@ export function LoginForm({ className }: { className?: string }) {
 									{...register("password")}
 								/>
 								<FieldDescription>
-									Use the password from your warehouse administrator.
+									Use the password from your warehouse administrator.{" "}
+									<Link
+										className="text-foreground underline underline-offset-4"
+										href="/forgot-password"
+									>
+										Forgot password?
+									</Link>
 								</FieldDescription>
 								<FieldError>{errors.password?.message}</FieldError>
 							</Field>

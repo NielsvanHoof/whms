@@ -41,6 +41,60 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/inventory-balances/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Stream on-hand stock balances as CSV for the current tenant */
+        get: operations["inventory.exportInventoryBalances"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/inventory-movements/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Stream inventory movement history as CSV for the current tenant */
+        get: operations["inventory.exportInventoryMovements"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/forgot-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue a password reset link for the given email address
+         * @description Always returns success to avoid revealing whether the email exists.
+         */
+        post: operations["auth.forgotPassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/inventory-balances": {
         parameters: {
             query?: never;
@@ -249,6 +303,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/auth/reset-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reset the user's password using a valid reset token */
+        post: operations["auth.resetPassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/account/sessions/{token}": {
         parameters: {
             query?: never;
@@ -306,7 +377,7 @@ export interface paths {
         };
         get: operations["roleManagement.users"];
         put?: never;
-        post?: never;
+        post: operations["roleManagement.store"];
         delete?: never;
         options?: never;
         head?: never;
@@ -359,6 +430,23 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["account.updateAccountProfile"];
+        trace?: never;
+    };
+    "/v1/tenant": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update the authenticated user's current workspace identity */
+        patch: operations["tenant.updateTenant"];
         trace?: never;
     };
     "/v1/warehouses": {
@@ -442,6 +530,11 @@ export interface components {
             password: string;
             password_confirmation: string;
         };
+        /** ForgotPasswordData */
+        ForgotPasswordData: {
+            /** Format: email */
+            email: string;
+        };
         /** InventoryBalanceResource */
         InventoryBalanceResource: {
             id: number;
@@ -516,6 +609,23 @@ export interface components {
             quantity: number;
             kind: string;
         };
+        /** ResetPasswordData */
+        ResetPasswordData: {
+            /** Format: email */
+            email: string;
+            token: string;
+            password: string;
+            password_confirmation: string;
+        };
+        /** StoreAccessUserData */
+        StoreAccessUserData: {
+            name: string;
+            /** Format: email */
+            email: string;
+            password: string;
+            password_confirmation: string;
+            roles: string[];
+        };
         /** StoreInventoryMovementData */
         StoreInventoryMovementData: components["schemas"]["ReceiptInventoryMovementData"] | components["schemas"]["AdjustmentInventoryMovementData"] | components["schemas"]["TransferInventoryMovementData"];
         /** StoreLocationData */
@@ -573,6 +683,11 @@ export interface components {
             is_active?: boolean;
             product_id: number;
         };
+        /** UpdateTenantData */
+        UpdateTenantData: {
+            name?: string;
+            slug?: string;
+        };
         /** UpdateWarehouseData */
         UpdateWarehouseData: {
             name?: string;
@@ -625,8 +740,8 @@ export interface components {
                 };
             };
         };
-        /** @description Authorization error */
-        AuthorizationException: {
+        /** @description Not found */
+        ModelNotFoundException: {
             headers: {
                 [name: string]: unknown;
             };
@@ -637,8 +752,8 @@ export interface components {
                 };
             };
         };
-        /** @description Not found */
-        ModelNotFoundException: {
+        /** @description Authorization error */
+        AuthorizationException: {
             headers: {
                 [name: string]: unknown;
             };
@@ -657,6 +772,90 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    "inventory.exportInventoryBalances": {
+        parameters: {
+            query?: {
+                "filter[warehouse_id]"?: string;
+                "filter[location_id]"?: string;
+                "filter[product_id]"?: string;
+                sort?: ("id" | "-id" | "quantity" | "-quantity" | "created_at" | "-created_at" | "updated_at" | "-updated_at")[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    "Transfer-Encoding": "chunked";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv; charset=UTF-8": string;
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+        };
+    };
+    "inventory.exportInventoryMovements": {
+        parameters: {
+            query?: {
+                "filter[warehouse_id]"?: string;
+                "filter[location_id]"?: string;
+                "filter[product_id]"?: string;
+                "filter[kind]"?: string;
+                "filter[transfer_correlation_id]"?: string;
+                sort?: ("id" | "-id" | "created_at" | "-created_at")[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    "Transfer-Encoding": "chunked";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv; charset=UTF-8": string;
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+        };
+    };
+    "auth.forgotPassword": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description `ForgotPasswordData` */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ForgotPasswordData"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        message: "We have emailed your password reset link.";
+                    };
+                };
+            };
+            422: components["responses"]["ValidationException"];
+        };
+    };
     "inventory-balances.index": {
         parameters: {
             query?: {
@@ -1308,6 +1507,34 @@ export interface operations {
             404: components["responses"]["ModelNotFoundException"];
         };
     };
+    "auth.resetPassword": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description `ResetPasswordData` */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResetPasswordData"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        message: "Your password has been reset.";
+                    };
+                };
+            };
+            422: components["responses"]["ValidationException"];
+        };
+    };
     "account.revokeAccountSession": {
         parameters: {
             query?: never;
@@ -1398,6 +1625,35 @@ export interface operations {
             401: components["responses"]["AuthenticationException"];
         };
     };
+    "roleManagement.store": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description `StoreAccessUserData` */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StoreAccessUserData"];
+            };
+        };
+        responses: {
+            /** @description `AccessUserResource` */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["AccessUserResource"];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
     "roleManagement.syncUserRoles": {
         parameters: {
             query?: never;
@@ -1482,6 +1738,51 @@ export interface operations {
                 };
             };
             401: components["responses"]["AuthenticationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "tenant.updateTenant": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description `UpdateTenantData` */
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["UpdateTenantData"];
+            };
+        };
+        responses: {
+            /** @description `TenantResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["TenantResource"];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            /** @description An error */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /**
+                         * @description Error overview.
+                         * @example
+                         */
+                        message: string;
+                    };
+                };
+            };
+            404: components["responses"]["ModelNotFoundException"];
             422: components["responses"]["ValidationException"];
         };
     };

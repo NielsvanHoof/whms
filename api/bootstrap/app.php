@@ -36,11 +36,11 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions): void {
         // Treat all `/api/*` failures as JSON so clients get structured errors without Accept headers.
         $exceptions->shouldRenderJsonWhen(function (Request $request, Throwable $e): bool {
-            return $request->is('api/*') || $request->expectsJson();
+            return $request->is('api/*', 'mcp/*') || $request->expectsJson();
         });
 
         $exceptions->render(function (NoCurrentTenant $e, Request $request) {
-            if ($request->is('api/*')) {
+            if ($request->is('api/*', 'mcp/*')) {
                 return response()->json([
                     'message' => $e->getMessage(),
                 ], 400);

@@ -7,6 +7,7 @@ namespace App\Providers;
 use Dedoc\Scramble\Scramble;
 use Dedoc\Scramble\Support\Generator\OpenApi;
 use Dedoc\Scramble\Support\Generator\SecurityScheme;
+use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\ServiceProvider;
@@ -38,5 +39,12 @@ final class AppServiceProvider extends ServiceProvider
         Model::shouldBeStrict();
 
         Http::preventStrayRequests();
+
+        ResetPassword::createUrlUsing(function (object $notifiable, string $token): string {
+            $frontendUrl = mb_rtrim((string) config('app.frontend_url'), '/');
+            $email = urlencode($notifiable->getEmailForPasswordReset());
+
+            return "{$frontendUrl}/reset-password?token={$token}&email={$email}";
+        });
     }
 }

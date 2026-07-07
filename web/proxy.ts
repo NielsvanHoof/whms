@@ -6,7 +6,16 @@ import {
 } from "./lib/auth";
 
 const LOGIN_PATH = "/login";
+const FORGOT_PASSWORD_PATH = "/forgot-password";
+const RESET_PASSWORD_PATH = "/reset-password";
 const DASHBOARD_PREFIX = "/dashboard";
+
+/** Guest routes that should redirect authenticated users to the dashboard. */
+const GUEST_AUTH_PATHS = [
+	LOGIN_PATH,
+	FORGOT_PASSWORD_PATH,
+	RESET_PASSWORD_PATH,
+] as const;
 
 /** App routes that require an authenticated session cookie. */
 const PROTECTED_PREFIXES = [
@@ -48,7 +57,10 @@ export function proxy(request: NextRequest) {
 		return NextResponse.redirect(url);
 	}
 
-	if (pathname === LOGIN_PATH && authed) {
+	if (
+		GUEST_AUTH_PATHS.includes(pathname as (typeof GUEST_AUTH_PATHS)[number]) &&
+		authed
+	) {
 		return NextResponse.redirect(new URL(DASHBOARD_PREFIX, request.url));
 	}
 
@@ -65,5 +77,7 @@ export const config = {
 		"/settings/:path*",
 		"/admin/:path*",
 		"/login",
+		"/forgot-password",
+		"/reset-password",
 	],
 };

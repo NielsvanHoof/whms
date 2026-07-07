@@ -1,9 +1,9 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { PackageSearchIcon } from "lucide-react";
+import { DownloadIcon, PackageSearchIcon } from "lucide-react";
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { ListFilterBar } from "@/components/filters/list-filter-bar";
 import { ListPagination } from "@/components/filters/list-pagination";
@@ -15,6 +15,7 @@ import { RefreshingIndicator } from "@/components/query/refreshing-indicator";
 import { TableEmptyState } from "@/components/query/table-empty-state";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Spinner } from "@/components/ui/spinner";
 import {
 	Table,
 	TableBody,
@@ -24,10 +25,13 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { useDelayedPending } from "@/hooks/use-delayed-pending";
+import { exportInventoryBalancesCsv } from "@/lib/api/inventory";
+import { downloadCsvBlob } from "@/lib/export/download-csv";
 import { filtersAreDirty, withPaginationParams } from "@/lib/nuqs/filter-utils";
 import { useInventoryBalanceFilters } from "@/lib/nuqs/inventory-balance-filters";
 import { useListPage } from "@/lib/nuqs/use-list-page";
 import { inventoryBalancesListQueryOptions } from "@/lib/queries/inventory";
+import { toastApiError } from "@/lib/toast";
 
 const sortOptions = [
 	{ value: "__default__", label: "Default (id ascending)" },
@@ -38,6 +42,7 @@ const sortOptions = [
 ] as const;
 
 export default function InventoryBalancesPage() {
+	const [exporting, setExporting] = useState(false);
 	const { goToPage, page, perPage, resetPage, setPerPage } = useListPage();
 	const {
 		applied,
@@ -73,6 +78,18 @@ export default function InventoryBalancesPage() {
 		minVisibleMs: 220,
 	});
 
+	const handleExport = async () => {
+		setExporting(true);
+		try {
+			const blob = await exportInventoryBalancesCsv(filterQuery);
+			downloadCsvBlob(blob, `inventory-balances-${Date.now()}.csv`);
+		} catch (error) {
+			void toastApiError(error, "Could not export balances.");
+		} finally {
+			setExporting(false);
+		}
+	};
+
 	return (
 		<div className="flex flex-col gap-6 p-6">
 			<div className="flex flex-col gap-2">
@@ -85,9 +102,31 @@ export default function InventoryBalancesPage() {
 							On-hand quantity per warehouse, location, and product.
 						</p>
 					</div>
-					<Button asChild size="sm" variant="outline">
-						<Link href="/inventory/movements">Movement history</Link>
-					</Button>
+					<div className="flex flex-wrap items-center gap-2">
+						<Button
+							disabled={exporting}
+							onClick={() => {
+								void handleExport();
+							}}
+							size="sm"
+							type="button"
+							variant="outline"
+						>
+							{exporting ? (
+								<Spinner
+									aria-hidden
+									className="size-4"
+									data-icon="inline-start"
+								/>
+							) : (
+								<DownloadIcon data-icon="inline-start" />
+							)}
+							Export CSV
+						</Button>
+						<Button asChild size="sm" variant="outline">
+							<Link href="/inventory/movements">Movement history</Link>
+						</Button>
+					</div>
 				</div>
 			</div>
 

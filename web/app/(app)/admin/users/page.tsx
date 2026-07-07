@@ -1,7 +1,8 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { SaveIcon, UsersIcon } from "lucide-react";
+import { SaveIcon, UserPlusIcon, UsersIcon } from "lucide-react";
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { FilterControl } from "@/components/filters/filter-control";
@@ -90,6 +91,16 @@ export default function AdminUsersPage() {
 	return (
 		<div className="flex flex-col gap-6 p-6">
 			<PageHeader
+				action={
+					canAssignRoles ? (
+						<Button asChild size="sm">
+							<Link href="/admin/users/create">
+								<UserPlusIcon data-icon="inline-start" />
+								Create user
+							</Link>
+						</Button>
+					) : undefined
+				}
 				description="Assign role memberships for tenant users."
 				title="User roles"
 			/>

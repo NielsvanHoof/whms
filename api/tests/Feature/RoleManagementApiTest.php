@@ -112,4 +112,70 @@ final class RoleManagementApiTest extends TestCase
         ])->assertUnprocessable()
             ->assertJsonValidationErrors(['roles.0']);
     }
+
+    public function test_manager_can_create_user_in_same_tenant(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $manager = User::factory()->create(['tenant_id' => $tenant->id]);
+        $this->assignRole($manager, 'manager');
+        $tenant->makeCurrent();
+
+        Sanctum::actingAs($manager);
+
+        $this->postJson('/api/v1/access/users', [
+            'name' => 'New Operator',
+            'email' => 'operator@example.com',
+            'password' => 'password-1',
+            'password_confirmation' => 'password-1',
+            'roles' => ['operator'],
+        ])->assertCreated()
+            ->assertJsonPath('data.email', 'operator@example.com')
+            ->assertJsonPath('data.roles.0', 'operator');
+
+        $this->assertDatabaseHas('users', [
+            'tenant_id' => $tenant->id,
+            'email' => 'operator@example.com',
+        ]);
+    }
+
+    public function test_viewer_cannot_create_user(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $viewer = User::factory()->create(['tenant_id' => $tenant->id]);
+        $this->assignRole($viewer, 'viewer');
+        $tenant->makeCurrent();
+
+        Sanctum::actingAs($viewer);
+
+        $this->postJson('/api/v1/access/users', [
+            'name' => 'Blocked',
+            'email' => 'blocked@example.com',
+            'password' => 'password-1',
+            'password_confirmation' => 'password-1',
+            'roles' => ['viewer'],
+        ])->assertForbidden();
+    }
+
+    public function test_manager_cannot_create_user_with_duplicate_email(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $manager = User::factory()->create(['tenant_id' => $tenant->id]);
+        User::factory()->create([
+            'tenant_id' => $tenant->id,
+            'email' => 'taken@example.com',
+        ]);
+        $this->assignRole($manager, 'manager');
+        $tenant->makeCurrent();
+
+        Sanctum::actingAs($manager);
+
+        $this->postJson('/api/v1/access/users', [
+            'name' => 'Duplicate',
+            'email' => 'taken@example.com',
+            'password' => 'password-1',
+            'password_confirmation' => 'password-1',
+            'roles' => ['viewer'],
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors(['email']);
+    }
 }

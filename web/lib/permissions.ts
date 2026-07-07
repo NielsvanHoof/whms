@@ -14,6 +14,7 @@ export const PERMISSIONS = {
 	productsManage: "products.manage",
 	rolesView: "roles.view",
 	rolesManage: "roles.manage",
+	tenantManage: "tenant.manage",
 	inventoryView: "inventory.view",
 	inventoryManage: "inventory.manage",
 } as const;
@@ -108,6 +109,13 @@ export function canManageRoles(
 	permissions: readonly string[] | undefined,
 ): boolean {
 	return hasPermission(permissions, PERMISSIONS.rolesManage);
+}
+
+/** Update workspace name and slug. */
+export function canManageTenant(
+	permissions: readonly string[] | undefined,
+): boolean {
+	return hasPermission(permissions, PERMISSIONS.tenantManage);
 }
 
 /** Stock balances and movement history (ledger). */

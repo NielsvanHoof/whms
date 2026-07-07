@@ -36,6 +36,7 @@ final class DatabaseSeeder extends Seeder
             'inventory.manage',
             'roles.view',
             'roles.manage',
+            'tenant.manage',
         ];
 
         foreach ($permissions as $permission) {

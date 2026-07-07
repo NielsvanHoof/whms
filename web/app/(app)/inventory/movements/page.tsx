@@ -1,9 +1,9 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeftRightIcon } from "lucide-react";
+import { ArrowLeftRightIcon, DownloadIcon } from "lucide-react";
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { FilterControl } from "@/components/filters/filter-control";
 import { ListFilterBar } from "@/components/filters/list-filter-bar";
@@ -30,6 +30,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { Spinner } from "@/components/ui/spinner";
 import {
 	Table,
 	TableBody,
@@ -40,6 +41,8 @@ import {
 } from "@/components/ui/table";
 import { useDelayedPending } from "@/hooks/use-delayed-pending";
 import { usePermissions } from "@/hooks/use-permissions";
+import { exportInventoryMovementsCsv } from "@/lib/api/inventory";
+import { downloadCsvBlob } from "@/lib/export/download-csv";
 import {
 	movementDetailUrl,
 	transferMovementsListUrl,
@@ -50,6 +53,7 @@ import { useRecordMovementPrefill } from "@/lib/nuqs/record-movement-prefill";
 import { useListPage } from "@/lib/nuqs/use-list-page";
 import { canManageInventory } from "@/lib/permissions";
 import { inventoryMovementsListQueryOptions } from "@/lib/queries/inventory";
+import { toastApiError } from "@/lib/toast";
 import { formatDate } from "@/lib/utils";
 
 const sortOptions = [
@@ -95,6 +99,7 @@ function quantityDeltaVariant(
 }
 
 export default function InventoryMovementsPage() {
+	const [exporting, setExporting] = useState(false);
 	const { permissions: permissionList } = usePermissions();
 	const canRecord = canManageInventory(permissionList);
 	const { goToPage, page, perPage, resetPage, setPerPage } = useListPage();
@@ -142,6 +147,18 @@ export default function InventoryMovementsPage() {
 		minVisibleMs: 220,
 	});
 
+	const handleExport = async () => {
+		setExporting(true);
+		try {
+			const blob = await exportInventoryMovementsCsv(filterQuery);
+			downloadCsvBlob(blob, `inventory-movements-${Date.now()}.csv`);
+		} catch (error) {
+			void toastApiError(error, "Could not export movements.");
+		} finally {
+			setExporting(false);
+		}
+	};
+
 	return (
 		<div className="flex flex-col gap-6 p-6">
 			<div className="flex flex-wrap items-center justify-between gap-2">
@@ -153,9 +170,31 @@ export default function InventoryMovementsPage() {
 						Ledger of stock changes (receipts, adjustments, transfers).
 					</p>
 				</div>
-				<Button asChild size="sm" variant="outline">
-					<Link href="/inventory/balances">Balances</Link>
-				</Button>
+				<div className="flex flex-wrap items-center gap-2">
+					<Button
+						disabled={exporting}
+						onClick={() => {
+							void handleExport();
+						}}
+						size="sm"
+						type="button"
+						variant="outline"
+					>
+						{exporting ? (
+							<Spinner
+								aria-hidden
+								className="size-4"
+								data-icon="inline-start"
+							/>
+						) : (
+							<DownloadIcon data-icon="inline-start" />
+						)}
+						Export CSV
+					</Button>
+					<Button asChild size="sm" variant="outline">
+						<Link href="/inventory/balances">Balances</Link>
+					</Button>
+				</div>
 			</div>
 
 			<RecordMovementForm

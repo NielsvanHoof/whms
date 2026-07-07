@@ -1,6 +1,6 @@
 import {
-	appendListPage,
-	type ListPageQuery,
+	appendListPagination,
+	type ListPaginationQuery,
 } from "@/lib/api/list-query-params";
 import { createBrowserAuthedClient } from "@/lib/auth";
 import type { components, operations } from "@/lib/openapi/schema";
@@ -24,7 +24,7 @@ export type UpdateLocationResponse =
 	operations["locations.update"]["responses"]["200"]["content"]["application/json"];
 
 function toLocationsSearchParams(
-	query: LocationsIndexQuery & ListPageQuery,
+	query: LocationsIndexQuery & ListPaginationQuery,
 ): URLSearchParams {
 	const searchParams = new URLSearchParams();
 
@@ -42,13 +42,13 @@ function toLocationsSearchParams(
 			searchParams.append("sort[]", sortValue);
 		}
 	}
-	appendListPage(searchParams, query);
+	appendListPagination(searchParams, query);
 
 	return searchParams;
 }
 
 export async function listLocations(
-	query: LocationsIndexQuery & ListPageQuery = {},
+	query: LocationsIndexQuery & ListPaginationQuery = {},
 ): Promise<LocationsIndexResponse> {
 	return createBrowserAuthedClient()
 		.get("api/v1/locations", {

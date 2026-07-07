@@ -33,6 +33,3 @@ export function appendListPagination(
 		searchParams.set("per_page", String(perPage));
 	}
 }
-
-/** @deprecated Use `appendListPagination` */
-export const appendListPage = appendListPagination;

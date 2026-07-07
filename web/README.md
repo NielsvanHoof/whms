@@ -1,36 +1,89 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# WHMS Web
 
-## Getting Started
+Next.js frontend for the Warehouse Management System (WHMS). It talks to the Laravel API in [`../api`](../api) for authentication, master data, inventory, and administration.
 
-First, run the development server:
+## Prerequisites
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Node.js 20+
+- WHMS API running locally (default `http://localhost:8000`)
+- Seeded demo user (see API README)
+
+## Environment
+
+Create `.env.local` in this directory:
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The browser must use `localhost` (not `127.0.0.1`) so CORS matches the API allowlist.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Development
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm install
+npm run dev
+```
 
-## Learn More
+Open [http://localhost:3000](http://localhost:3000).
 
-To learn more about Next.js, take a look at the following resources:
+### Demo login
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+After seeding the API database:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Email | Password | Role |
+|-------|----------|------|
+| `test@example.com` | `password` | owner |
+| `test-second@example.com` | `password` | viewer |
 
-## Deploy on Vercel
+## Scripts
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Command | Purpose |
+|---------|---------|
+| `npm run dev` | Start Next.js dev server |
+| `npm run build` | Production build |
+| `npm run lint` | Biome lint + format check |
+| `npm run generate:api` | Regenerate OpenAPI types from running API |
+| `npm run test:e2e` | Playwright smoke tests (requires API + seeded DB) |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## E2E tests
+
+With the API and web dev servers running:
+
+```bash
+PLAYWRIGHT_SKIP_WEBSERVER=1 npm run test:e2e
+```
+
+Optional overrides:
+
+- `E2E_USER_EMAIL` / `E2E_USER_PASSWORD` — login credentials (default: seeded owner)
+- `PLAYWRIGHT_BASE_URL` — web app URL (default: `http://localhost:3000`)
+
+## Permissions
+
+Navigation and actions are gated by permissions from `GET /api/v1/me`:
+
+| Permission | Access |
+|------------|--------|
+| `warehouses.view` / `warehouses.manage` | Warehouses list / CRUD |
+| `locations.view` / `locations.manage` | Locations list / CRUD |
+| `products.view` / `products.manage` | Products list / CRUD |
+| `inventory.view` / `inventory.manage` | Balances, movements, CSV export / record movements |
+| `roles.view` / `roles.manage` | Admin roles catalog / user create & role assignment |
+| `tenant.manage` | Edit workspace name and slug |
+
+Roles (`owner`, `manager`, `operator`, `viewer`) are seeded on the API. Owners and managers have full access including `tenant.manage`.
+
+## MCP (Cursor)
+
+The WHMS MCP server runs from the API project. Cursor config is in [`.cursor/mcp.json`](.cursor/mcp.json) with `cwd` set to `../api`.
+
+## Project layout
+
+```
+app/           Next.js App Router (dashboard, CRUD, settings, admin)
+components/    UI and domain components
+lib/api/       Typed HTTP clients
+lib/queries/   TanStack Query options
+e2e/           Playwright smoke tests
+```

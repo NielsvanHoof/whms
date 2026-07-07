@@ -1,6 +1,6 @@
 import {
-	appendListPage,
-	type ListPageQuery,
+	appendListPagination,
+	type ListPaginationQuery,
 } from "@/lib/api/list-query-params";
 import { createBrowserAuthedClient } from "@/lib/auth";
 import type { components, operations } from "@/lib/openapi/schema";
@@ -21,7 +21,7 @@ export type UpdateWarehouseResponse =
 	operations["warehouses.update"]["responses"]["200"]["content"]["application/json"];
 
 function toWarehousesSearchParams(
-	query: WarehousesIndexQuery & ListPageQuery,
+	query: WarehousesIndexQuery & ListPaginationQuery,
 ): URLSearchParams {
 	const searchParams = new URLSearchParams();
 
@@ -38,7 +38,7 @@ function toWarehousesSearchParams(
 			searchParams.append("sort[]", sortValue);
 		}
 	}
-	appendListPage(searchParams, query);
+	appendListPagination(searchParams, query);
 
 	return searchParams;
 }
@@ -47,7 +47,7 @@ function toWarehousesSearchParams(
  * Fetches the current tenant's warehouses.
  */
 export async function listWarehouses(
-	query: WarehousesIndexQuery & ListPageQuery = {},
+	query: WarehousesIndexQuery & ListPaginationQuery = {},
 ): Promise<WarehousesIndexResponse> {
 	return createBrowserAuthedClient()
 		.get("api/v1/warehouses", {
