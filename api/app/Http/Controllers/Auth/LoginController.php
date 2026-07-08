@@ -8,15 +8,16 @@ use App\Data\Auth\LoginData;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\UserResource;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 
 final class LoginController extends Controller
 {
     /**
-     * Exchange email and password for a Sanctum personal access token.
+     * Authenticate the first-party SPA using Laravel's session guard.
      */
-    public function __invoke(LoginData $data): JsonResponse
+    public function __invoke(LoginData $data, Request $request): JsonResponse
     {
         if (! Auth::guard('web')->attempt(['email' => $data->email, 'password' => $data->password])) {
             throw ValidationException::withMessages([
@@ -25,14 +26,9 @@ final class LoginController extends Controller
         }
 
         $user = Auth::guard('web')->user();
-        Auth::guard('web')->logout();
-        $deviceName = $data->device_name ?? 'api';
-
-        $plainTextToken = $user->createToken($deviceName)->plainTextToken;
+        $request->session()->regenerate();
 
         return response()->json([
-            'token' => $plainTextToken,
-            'token_type' => 'Bearer',
             'user' => new UserResource($user),
         ]);
     }

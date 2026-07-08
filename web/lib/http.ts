@@ -13,12 +13,28 @@ function apiBaseUrl(): string {
 }
 
 export type CreateHttpClientOptions = {
-	/**
-	 * When set, non-empty values become `Authorization: Bearer …` on each request.
-	 * Omit for unauthenticated calls (e.g. login).
-	 */
-	getToken?: () => string | null;
+	onUnauthorized?: () => void;
 };
+
+function readCookie(name: string): string | null {
+	if (typeof document === "undefined") {
+		return null;
+	}
+
+	const cookie = document.cookie
+		.split("; ")
+		.find((entry) => entry.startsWith(`${name}=`));
+
+	if (!cookie) {
+		return null;
+	}
+
+	return decodeURIComponent(cookie.slice(name.length + 1));
+}
+
+function isUnsafeMethod(method: string): boolean {
+	return !["GET", "HEAD", "OPTIONS"].includes(method.toUpperCase());
+}
 
 /**
  * Shared HTTP client for the Laravel API.
@@ -38,9 +54,18 @@ export function createHttpClient(
 		hooks: {
 			beforeRequest: [
 				(state) => {
-					const token = options?.getToken?.() ?? null;
-					if (token) {
-						state.request.headers.set("Authorization", `Bearer ${token}`);
+					if (isUnsafeMethod(state.request.method)) {
+						const xsrfToken = readCookie("XSRF-TOKEN");
+						if (xsrfToken) {
+							state.request.headers.set("X-XSRF-TOKEN", xsrfToken);
+						}
+					}
+				},
+			],
+			afterResponse: [
+				({ response }) => {
+					if (response.status === 401 || response.status === 419) {
+						options?.onUnauthorized?.();
 					}
 				},
 			],

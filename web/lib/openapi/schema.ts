@@ -514,8 +514,8 @@ export interface components {
             id: number;
             name: string;
             is_current: string;
-            last_used_at: string;
-            created_at: string;
+            last_used_at: string | null;
+            created_at: string | null;
         };
         /** AdjustmentInventoryMovementData */
         AdjustmentInventoryMovementData: {
@@ -546,14 +546,20 @@ export interface components {
             warehouse?: components["schemas"]["WarehouseResource"];
             location?: components["schemas"]["LocationResource"];
             product?: components["schemas"]["ProductResource"];
-            created_at: string;
-            updated_at: string;
+            created_at: string | null;
+            updated_at: string | null;
         };
+        /**
+         * InventoryMovementKind
+         * @description Describes how stock should change for a single inventory movement request. Receipts add stock. Adjustments apply a signed delta (cycle counts, corrections). Transfers move units between two locations in one atomic transaction.
+         * @enum {string}
+         */
+        InventoryMovementKind: "receipt" | "adjustment" | "transfer";
         /** InventoryMovementResource */
         InventoryMovementResource: {
             id: number;
             tenant_id: number;
-            kind: string;
+            kind: components["schemas"]["InventoryMovementKind"];
             warehouse_id: number;
             location_id: number;
             product_id: number;
@@ -563,19 +569,19 @@ export interface components {
             warehouse?: components["schemas"]["WarehouseResource"];
             location?: components["schemas"]["LocationResource"];
             product?: components["schemas"]["ProductResource"];
-            created_at: string;
-            updated_at: string;
+            created_at: string | null;
+            updated_at: string | null;
         };
         /** LocationResource */
         LocationResource: {
             id: number;
             tenant_id: number;
             warehouse_id: number;
-            warehouse_code?: string;
+            warehouse_code?: string | null;
             code: string;
             type: string;
-            created_at: string;
-            updated_at: string;
+            created_at: string | null;
+            updated_at: string | null;
         };
         /** LoginData */
         LoginData: {
@@ -599,8 +605,8 @@ export interface components {
             name: string;
             unit: string;
             is_active: boolean;
-            created_at: string;
-            updated_at: string;
+            created_at: string | null;
+            updated_at: string | null;
         };
         /** ReceiptInventoryMovementData */
         ReceiptInventoryMovementData: {
@@ -707,8 +713,8 @@ export interface components {
             tenant_id: number;
             name: string;
             code: string | null;
-            created_at: string;
-            updated_at: string;
+            created_at: string | null;
+            updated_at: string | null;
         };
     };
     responses: {
@@ -1284,9 +1290,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        token: string;
-                        /** @constant */
-                        token_type: "Bearer";
                         user: components["schemas"]["UserResource"];
                     };
                 };

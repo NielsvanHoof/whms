@@ -1,6 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 
-import type { ListPageQuery } from "@/lib/api/list-query-params";
+import type { ListPaginationQuery } from "@/lib/api/list-query-params";
 import {
 	type LocationsIndexQuery,
 	listLocations,
@@ -9,14 +9,14 @@ import {
 
 export const locationQueryKeys = {
 	all: ["locations"] as const,
-	list: (query: LocationsIndexQuery & ListPageQuery) =>
+	list: (query: LocationsIndexQuery & ListPaginationQuery) =>
 		[...locationQueryKeys.all, "list", query] as const,
 	detail: (locationId: number) =>
 		[...locationQueryKeys.all, "detail", locationId] as const,
 };
 
 export function locationsListQueryOptions(
-	query: LocationsIndexQuery & ListPageQuery = {},
+	query: LocationsIndexQuery & ListPaginationQuery = {},
 ) {
 	return queryOptions({
 		queryKey: locationQueryKeys.list(query),

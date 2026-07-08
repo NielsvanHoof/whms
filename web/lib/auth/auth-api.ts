@@ -1,15 +1,23 @@
-import type { components, operations } from "@/lib/openapi/schema";
+import type { components } from "@/lib/openapi/schema";
 import { createHttpClient } from "../http";
 
 export type LoginRequestBody = components["schemas"]["LoginData"];
 
 export type AuthUser = components["schemas"]["UserResource"];
 
-export type LoginResponse =
-	operations["auth.login"]["responses"]["200"]["content"]["application/json"];
+export type LoginResponse = {
+	user: AuthUser;
+};
+
+export async function ensureCsrfCookie(): Promise<void> {
+	const client = createHttpClient();
+	await client.get("sanctum/csrf-cookie");
+}
 
 export async function login(body: LoginRequestBody): Promise<LoginResponse> {
 	const client = createHttpClient();
+	// Use one client so the CSRF cookie from the preflight request is sent on login.
+	await client.get("sanctum/csrf-cookie");
 	return client.post("api/v1/auth/login", { json: body }).json<LoginResponse>();
 }
 

@@ -1,21 +1,20 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 
 import {
 	AUTH_SESSION_CHANGED_EVENT,
-	AUTH_SESSION_STORAGE_KEY,
 	type AuthSnapshot,
 	logout as clearAuthSession,
-	getAuthSnapshot,
 } from "@/lib/auth";
+import { meQueryOptions } from "@/lib/queries/me";
 
 export type UseAuthResult =
 	| {
 			status: "loading";
 			session: null;
 			user: null;
-			token: null;
 			isAuthenticated: false;
 			isGuest: false;
 			logout: () => void;
@@ -24,7 +23,6 @@ export type UseAuthResult =
 			status: "guest";
 			session: null;
 			user: null;
-			token: null;
 			isAuthenticated: false;
 			isGuest: true;
 			logout: () => void;
@@ -36,22 +34,17 @@ export type UseAuthResult =
 				AuthSnapshot,
 				{ status: "authenticated" }
 			>["session"]["user"];
-			token: string;
 			isAuthenticated: true;
 			isGuest: false;
 			logout: () => void;
 	  };
 
 /**
- * Hydration-safe auth state for client components.
- * It starts as `loading` so server render and first client render match, then reads localStorage.
+ * Hydration-safe auth state for client components, backed by Sanctum's HttpOnly session cookie.
  */
 export function useAuth(): UseAuthResult {
 	const [snapshot, setSnapshot] = useState<AuthSnapshot | null>(null);
-
-	const refresh = useCallback(() => {
-		setSnapshot(getAuthSnapshot());
-	}, []);
+	const meQuery = useQuery(meQueryOptions());
 
 	const logout = useCallback(() => {
 		clearAuthSession();
@@ -59,28 +52,33 @@ export function useAuth(): UseAuthResult {
 	}, []);
 
 	useEffect(() => {
-		refresh();
+		const nextSnapshot: AuthSnapshot = meQuery.data
+			? { status: "authenticated", session: { user: meQuery.data.data.user } }
+			: meQuery.isError
+				? { status: "guest" }
+				: { status: "guest" };
+		setSnapshot(meQuery.isPending ? null : nextSnapshot);
+	}, [meQuery.data, meQuery.isError, meQuery.isPending]);
 
-		function onStorage(event: StorageEvent) {
-			if (event.key === null || event.key === AUTH_SESSION_STORAGE_KEY) {
-				refresh();
-			}
+	useEffect(() => {
+		function onAuthSessionChanged() {
+			void meQuery.refetch();
 		}
 
-		window.addEventListener("storage", onStorage);
-		window.addEventListener(AUTH_SESSION_CHANGED_EVENT, refresh);
+		window.addEventListener(AUTH_SESSION_CHANGED_EVENT, onAuthSessionChanged);
 		return () => {
-			window.removeEventListener("storage", onStorage);
-			window.removeEventListener(AUTH_SESSION_CHANGED_EVENT, refresh);
+			window.removeEventListener(
+				AUTH_SESSION_CHANGED_EVENT,
+				onAuthSessionChanged,
+			);
 		};
-	}, [refresh]);
+	}, [meQuery]);
 
 	if (snapshot === null) {
 		return {
 			status: "loading",
 			session: null,
 			user: null,
-			token: null,
 			isAuthenticated: false,
 			isGuest: false,
 			logout,
@@ -92,7 +90,6 @@ export function useAuth(): UseAuthResult {
 			status: "guest",
 			session: null,
 			user: null,
-			token: null,
 			isAuthenticated: false,
 			isGuest: true,
 			logout,
@@ -103,7 +100,6 @@ export function useAuth(): UseAuthResult {
 		status: "authenticated",
 		session: snapshot.session,
 		user: snapshot.session.user,
-		token: snapshot.session.token,
 		isAuthenticated: true,
 		isGuest: false,
 		logout,

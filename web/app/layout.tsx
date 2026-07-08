@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import "./globals.css";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import { AuthCookieSync } from "@/components/providers/auth-cookie-sync";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
@@ -27,7 +26,6 @@ export default function RootLayout({
 				<QueryProvider>
 					<ThemeProvider>
 						<NuqsAdapter>
-							<AuthCookieSync />
 							<ReactQueryDevtools initialIsOpen={false} />
 							{children}
 							<Toaster />

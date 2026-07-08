@@ -5,7 +5,13 @@ export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs));
 }
 
-export function formatDate(value: string): string {
+export function formatDate(
+	value: string | null | undefined,
+	fallback = "-",
+): string {
+	if (!value) {
+		return fallback;
+	}
 	const date = new Date(value);
 	if (Number.isNaN(date.getTime())) {
 		return value;
@@ -13,7 +19,13 @@ export function formatDate(value: string): string {
 	return date.toLocaleString();
 }
 
-export function formatWhen(value: string): string {
+export function formatWhen(
+	value: string | null | undefined,
+	fallback = "-",
+): string {
+	if (!value) {
+		return fallback;
+	}
 	const date = new Date(value);
 	if (Number.isNaN(date.getTime())) {
 		return value;

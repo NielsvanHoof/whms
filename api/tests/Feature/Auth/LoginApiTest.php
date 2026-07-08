@@ -40,23 +40,32 @@ final class LoginApiTest extends TestCase
             ->assertJsonValidationErrors(['email']);
     }
 
-    public function test_login_returns_bearer_token_for_valid_credentials(): void
+    public function test_login_creates_session_for_valid_credentials(): void
     {
         $tenant = Tenant::factory()->create();
-        User::factory()->create([
+        $user = User::factory()->create([
             'tenant_id' => $tenant->id,
             'email' => 'user@example.com',
             'password' => Hash::make('SuperSecret123!'),
         ]);
 
-        $response = $this->postJson('/api/v1/auth/login', [
-            'email' => 'user@example.com',
-            'password' => 'SuperSecret123!',
-            'device_name' => 'phpunit',
-        ]);
+        $this->withHeader('Origin', 'http://localhost:3000')
+            ->get('/sanctum/csrf-cookie');
+
+        $response = $this
+            ->withHeader('Origin', 'http://localhost:3000')
+            ->postJson('/api/v1/auth/login', [
+                'email' => 'user@example.com',
+                'password' => 'SuperSecret123!',
+                'device_name' => 'phpunit',
+            ]);
 
         $response->assertOk()
-            ->assertJsonPath('token_type', 'Bearer')
-            ->assertJsonStructure(['token', 'user' => ['id', 'tenant_id', 'name', 'email']]);
+            ->assertJsonMissingPath('token')
+            ->assertJsonMissingPath('token_type')
+            ->assertJsonPath('user.id', $user->id)
+            ->assertJsonStructure(['user' => ['id', 'tenant_id', 'name', 'email']]);
+
+        $this->assertAuthenticatedAs($user, 'web');
     }
 }

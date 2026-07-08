@@ -9,14 +9,12 @@ import { FilterControl } from "@/components/filters/filter-control";
 import { ListFilterBar } from "@/components/filters/list-filter-bar";
 import { ListPagination } from "@/components/filters/list-pagination";
 import { SortFilterSelect } from "@/components/filters/sort-filter-select";
-import { PageHeader } from "@/components/layout/page-header";
-import { ErrorState } from "@/components/query/error-state";
-import { LoadingState } from "@/components/query/loading-state";
-import { RefreshingIndicator } from "@/components/query/refreshing-indicator";
+import { ResourceListCard } from "@/components/list/resource-list-card";
+import { ResourceListQueryState } from "@/components/list/resource-list-query-state";
+import { ResourcePage } from "@/components/list/resource-page";
 import { TableEmptyState } from "@/components/query/table-empty-state";
 import { TableRowActions } from "@/components/table/table-row-actions";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
 	Table,
@@ -29,15 +27,10 @@ import {
 import { useDelayedPending } from "@/hooks/use-delayed-pending";
 import { useDeleteRowMutation } from "@/hooks/use-delete-row-mutation";
 import { usePermissions } from "@/hooks/use-permissions";
-import { deleteWarehouse } from "@/lib/api/warehouses";
 import { filtersAreDirty, withPaginationParams } from "@/lib/nuqs/filter-utils";
 import { useListPage } from "@/lib/nuqs/use-list-page";
 import { useWarehouseFilters } from "@/lib/nuqs/warehouse-filters";
-import { canManageWarehouses, canViewWarehouses } from "@/lib/permissions";
-import {
-	warehouseQueryKeys,
-	warehousesListQueryOptions,
-} from "@/lib/queries/warehouses";
+import { warehouseListResource } from "@/lib/resources/warehouses";
 import { formatDate } from "@/lib/utils";
 
 const sortOptions = [
@@ -87,7 +80,7 @@ export default function WarehousesPage() {
 		isPending,
 		refetch,
 	} = useQuery({
-		...warehousesListQueryOptions(apiQuery),
+		...warehouseListResource.listQueryOptions(apiQuery),
 		placeholderData: (previousData) => previousData,
 	});
 
@@ -97,43 +90,37 @@ export default function WarehousesPage() {
 	});
 
 	const permList = permissions.permissions;
-	const canView = canViewWarehouses(permList);
-	const canCreate = canManageWarehouses(permList);
-	const canEdit = canManageWarehouses(permList);
-	const canDelete = canManageWarehouses(permList);
+	const canView = warehouseListResource.canView(permList);
+	const canCreate = warehouseListResource.canManage(permList);
+	const canEdit = warehouseListResource.canManage(permList);
+	const canDelete = warehouseListResource.canManage(permList);
 
 	const { deleteRow, isDeleting } = useDeleteRowMutation({
-		deleteFn: deleteWarehouse,
-		invalidateQueryKey: warehouseQueryKeys.all,
-		successMessage: "Warehouse deleted",
-		errorMessage: "Could not delete warehouse.",
+		deleteFn: warehouseListResource.deleteFn,
+		invalidateQueryKey: warehouseListResource.invalidateQueryKey,
+		successMessage: warehouseListResource.deleteSuccessMessage,
+		errorMessage: warehouseListResource.deleteErrorMessage,
 	});
 
 	return (
-		<div className="flex flex-col gap-6 p-6">
-			<PageHeader
-				action={
-					canCreate ? (
-						<Button asChild size="sm" variant="outline">
-							<Link href="/warehouses/create">
-								<PlusIcon data-icon="inline-start" />
-								Create warehouse
-							</Link>
-						</Button>
-					) : null
-				}
-				description="Browse tenant warehouses and filter by name or code."
-				title="Warehouses"
-			/>
-			{!canView ? (
-				<ErrorState
-					description="You do not have permission to view warehouses."
-					title="Access denied"
-				/>
-			) : null}
-
-			{canView ? (
-				<Card>
+		<ResourcePage
+			accessDeniedDescription={warehouseListResource.accessDeniedDescription}
+			action={
+				canCreate ? (
+					<Button asChild size="sm" variant="outline">
+						<Link href={warehouseListResource.createHref}>
+							<PlusIcon data-icon="inline-start" />
+							{warehouseListResource.createLabel}
+						</Link>
+					</Button>
+				) : null
+			}
+			canView={canView}
+			description={warehouseListResource.description}
+			title={warehouseListResource.title}
+		>
+			<ResourceListCard
+				filters={
 					<ListFilterBar
 						isDirty={isDirty}
 						onApply={applyFilters}
@@ -175,104 +162,98 @@ export default function WarehousesPage() {
 							value={draft.sort}
 						/>
 					</ListFilterBar>
-					<CardContent className="pt-6">
-						{showPending && !warehouses ? (
-							<LoadingState
-								description="Loading warehouses for the current query."
-								title="Fetching warehouses"
+				}
+			>
+				<ResourceListQueryState
+					data={warehouses}
+					error={error}
+					errorDescription={warehouseListResource.errorDescription}
+					errorTitle={warehouseListResource.errorTitle}
+					isError={isError}
+					isFetching={isFetching}
+					isPendingVisible={showPending}
+					loadingDescription={warehouseListResource.loadingDescription}
+					loadingTitle={warehouseListResource.loadingTitle}
+					onRetry={() => {
+						void refetch();
+					}}
+				>
+					{(warehouseResponse) => (
+						<>
+							<ListPagination
+								itemLabel={warehouseListResource.itemLabel}
+								meta={warehouseResponse.meta}
+								onPageChange={goToPage}
+								onPerPageChange={setPerPage}
+								perPage={perPage}
 							/>
-						) : null}
-
-						{isError ? (
-							<ErrorState
-								description="The warehouses list could not be fetched."
-								error={error}
-								isRetrying={isFetching && !showPending}
-								onRetry={() => {
-									void refetch();
-								}}
-								title="Could not load warehouses"
-							/>
-						) : null}
-
-						{!isError && warehouses ? (
-							<div className="relative flex flex-col gap-3">
-								{isFetching && !showPending ? <RefreshingIndicator /> : null}
-								<ListPagination
-									itemLabel="warehouse"
-									meta={warehouses.meta}
-									onPageChange={goToPage}
-									onPerPageChange={setPerPage}
-									perPage={perPage}
-								/>
-								<Table>
-									<TableHeader>
-										<TableRow>
-											<TableHead>ID</TableHead>
-											<TableHead>Name</TableHead>
-											<TableHead>Code</TableHead>
-											<TableHead>Created</TableHead>
-											{canEdit || canDelete ? (
-												<TableHead className="text-right">Actions</TableHead>
-											) : null}
-										</TableRow>
-									</TableHeader>
-									<TableBody>
-										{warehouses.data.length ? (
-											warehouses.data.map((warehouse) => (
-												<TableRow key={warehouse.id}>
-													<TableCell>{warehouse.id}</TableCell>
-													<TableCell className="font-medium">
-														<Link
-															className="hover:underline"
-															href={`/warehouses/${warehouse.id}`}
-														>
-															{warehouse.name}
-														</Link>
+							<Table>
+								<TableHeader>
+									<TableRow>
+										<TableHead>ID</TableHead>
+										<TableHead>Name</TableHead>
+										<TableHead>Code</TableHead>
+										<TableHead>Created</TableHead>
+										{canEdit || canDelete ? (
+											<TableHead className="text-right">Actions</TableHead>
+										) : null}
+									</TableRow>
+								</TableHeader>
+								<TableBody>
+									{warehouseResponse.data.length ? (
+										warehouseResponse.data.map((warehouse) => (
+											<TableRow key={warehouse.id}>
+												<TableCell>{warehouse.id}</TableCell>
+												<TableCell className="font-medium">
+													<Link
+														className="hover:underline"
+														href={`/warehouses/${warehouse.id}`}
+													>
+														{warehouse.name}
+													</Link>
+												</TableCell>
+												<TableCell>{warehouse.code ?? "-"}</TableCell>
+												<TableCell>
+													{formatDate(warehouse.created_at)}
+												</TableCell>
+												{canEdit || canDelete ? (
+													<TableCell className="text-right">
+														<TableRowActions
+															canDelete={canDelete}
+															canEdit={canEdit}
+															deleteDescription={
+																<>
+																	This permanently removes{" "}
+																	<span className="font-medium text-foreground">
+																		{warehouse.name}
+																	</span>
+																	. Locations in this warehouse may block
+																	deletion.
+																</>
+															}
+															deleteTitle="Delete warehouse?"
+															editHref={`/warehouses/${warehouse.id}/edit`}
+															isDeletePending={isDeleting(warehouse.id)}
+															onDelete={() => deleteRow(warehouse.id)}
+														/>
 													</TableCell>
-													<TableCell>{warehouse.code ?? "-"}</TableCell>
-													<TableCell>
-														{formatDate(warehouse.created_at)}
-													</TableCell>
-													{canEdit || canDelete ? (
-														<TableCell className="text-right">
-															<TableRowActions
-																canDelete={canDelete}
-																canEdit={canEdit}
-																deleteDescription={
-																	<>
-																		This permanently removes{" "}
-																		<span className="font-medium text-foreground">
-																			{warehouse.name}
-																		</span>
-																		. Locations in this warehouse may block
-																		deletion.
-																	</>
-																}
-																deleteTitle="Delete warehouse?"
-																editHref={`/warehouses/${warehouse.id}/edit`}
-																isDeletePending={isDeleting(warehouse.id)}
-																onDelete={() => deleteRow(warehouse.id)}
-															/>
-														</TableCell>
-													) : null}
-												</TableRow>
-											))
-										) : (
-											<TableEmptyState
-												colSpan={canEdit || canDelete ? 5 : 4}
-												description="Try adjusting the filters or create the first warehouse for this tenant."
-												icon={WarehouseIcon}
-												title="No warehouses found"
-											/>
-										)}
-									</TableBody>
-								</Table>
-							</div>
-						) : null}
-					</CardContent>
-				</Card>
-			) : null}
-		</div>
+												) : null}
+											</TableRow>
+										))
+									) : (
+										<TableEmptyState
+											colSpan={canEdit || canDelete ? 5 : 4}
+											description="Try adjusting the filters or create the first warehouse for this tenant."
+											icon={WarehouseIcon}
+											title="No warehouses found"
+										/>
+									)}
+								</TableBody>
+							</Table>
+						</>
+					)}
+				</ResourceListQueryState>
+			</ResourceListCard>
+		</ResourcePage>
 	);
 }

@@ -19,6 +19,8 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->statefulApi();
+
         /*
          * Laravel defaults to redirectGuestsTo(route('login')). This API has no web `login`
          * route; unauthenticated browser hits (no Accept: application/json) would throw

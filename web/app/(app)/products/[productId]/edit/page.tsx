@@ -1,76 +1,18 @@
-"use client";
+import { ProductEditPageClient } from "@/components/products/product-edit-page-client";
 
-import { useQuery } from "@tanstack/react-query";
-import { ArrowLeftIcon } from "lucide-react";
-import Link from "next/link";
-import { use } from "react";
-
-import { PermissionGuard } from "@/components/auth/permission-guard";
-import { ProductForm } from "@/components/products/product-form";
-import { ErrorState } from "@/components/query/error-state";
-import { LoadingState } from "@/components/query/loading-state";
-import { Button } from "@/components/ui/button";
-import { PERMISSIONS } from "@/lib/permissions";
-import { productDetailQueryOptions } from "@/lib/queries/products";
-
-export default function EditProductPage({
-	params,
-}: {
+type EditProductPageProps = {
 	params: Promise<{ productId: string }>;
-}) {
-	const { productId: productIdParam } = use(params);
-	const productId = Number.parseInt(productIdParam, 10);
-	const idIsValid = Number.isFinite(productId);
+};
 
-	const query = useQuery({
-		...productDetailQueryOptions(idIsValid ? productId : 0),
-		enabled: idIsValid,
-	});
+export default async function EditProductPage({
+	params,
+}: EditProductPageProps) {
+	const { productId: productIdParam } = await params;
+	const productId = Number.parseInt(productIdParam, 10);
 
 	return (
-		<PermissionGuard allOf={[PERMISSIONS.productsManage]}>
-			<div className="flex flex-col gap-6 p-6">
-				<div className="flex items-center justify-between gap-3">
-					<div className="flex flex-col gap-2">
-						<h1 className="font-semibold text-2xl tracking-tight">
-							Edit product
-						</h1>
-						<p className="text-muted-foreground text-sm">
-							Update product details.
-						</p>
-					</div>
-					<Button asChild variant="outline">
-						<Link href={`/products/${productId}`}>
-							<ArrowLeftIcon data-icon="inline-start" />
-							Back to product
-						</Link>
-					</Button>
-				</div>
-				{!idIsValid ? (
-					<ErrorState
-						description="The product ID in the URL is not valid."
-						title="Invalid product"
-					/>
-				) : null}
-				{idIsValid && query.isPending ? (
-					<LoadingState title="Loading product" />
-				) : null}
-				{idIsValid && query.isError ? (
-					<ErrorState error={query.error} title="Could not load product" />
-				) : null}
-				{query.data ? (
-					<ProductForm
-						defaultValues={{
-							sku: query.data.data.sku,
-							name: query.data.data.name,
-							unit: query.data.data.unit,
-							isActive: query.data.data.is_active,
-						}}
-						mode="edit"
-						productId={productId}
-					/>
-				) : null}
-			</div>
-		</PermissionGuard>
+		<ProductEditPageClient
+			productId={Number.isFinite(productId) ? productId : null}
+		/>
 	);
 }

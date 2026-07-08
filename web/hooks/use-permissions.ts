@@ -2,7 +2,6 @@
 
 import { useQuery } from "@tanstack/react-query";
 
-import { useAuth } from "@/hooks/use-auth";
 import {
 	hasAllPermissions,
 	hasAnyPermission,
@@ -12,20 +11,14 @@ import {
 import { meQueryOptions } from "@/lib/queries/me";
 
 export function usePermissions() {
-	const auth = useAuth();
-	const meQuery = useQuery({
-		...meQueryOptions(),
-		enabled: auth.status === "authenticated",
-	});
+	const meQuery = useQuery(meQueryOptions());
 
 	const permissions = meQuery.data?.data.permissions ?? [];
 
 	return {
 		permissions,
 		me: meQuery.data?.data,
-		isLoading:
-			auth.status === "loading" ||
-			(auth.status === "authenticated" && meQuery.isPending),
+		isLoading: meQuery.isPending,
 		can: (permission: PermissionKey) => hasPermission(permissions, permission),
 		canAny: (keys: readonly PermissionKey[]) =>
 			hasAnyPermission(permissions, keys),

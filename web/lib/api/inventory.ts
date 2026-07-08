@@ -36,6 +36,9 @@ export type TransferInventoryMovementData =
 export type CreateInventoryMovementResponse =
 	operations["inventoryMovement.store"]["responses"]["201"]["content"]["application/json"];
 
+export type InventoryMovementKind =
+	components["schemas"]["InventoryMovementKind"];
+
 function toInventoryBalancesSearchParams(
 	query: InventoryBalancesIndexQuery & ListPaginationQuery,
 ): URLSearchParams {

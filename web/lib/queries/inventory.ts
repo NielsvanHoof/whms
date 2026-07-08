@@ -8,15 +8,15 @@ import {
 	showInventoryBalance,
 	showInventoryMovement,
 } from "@/lib/api/inventory";
-import type { ListPageQuery } from "@/lib/api/list-query-params";
+import type { ListPaginationQuery } from "@/lib/api/list-query-params";
 
 export const inventoryQueryKeys = {
 	all: ["inventory"] as const,
-	balancesList: (query: InventoryBalancesIndexQuery & ListPageQuery) =>
+	balancesList: (query: InventoryBalancesIndexQuery & ListPaginationQuery) =>
 		[...inventoryQueryKeys.all, "balances", "list", query] as const,
 	balanceDetail: (id: number) =>
 		[...inventoryQueryKeys.all, "balances", "detail", id] as const,
-	movementsList: (query: InventoryMovementsIndexQuery & ListPageQuery) =>
+	movementsList: (query: InventoryMovementsIndexQuery & ListPaginationQuery) =>
 		[...inventoryQueryKeys.all, "movements", "list", query] as const,
 	movementDetail: (id: number) =>
 		[...inventoryQueryKeys.all, "movements", "detail", id] as const,
@@ -30,7 +30,7 @@ export const inventoryQueryKeys = {
 };
 
 export function inventoryBalancesListQueryOptions(
-	query: InventoryBalancesIndexQuery & ListPageQuery = {},
+	query: InventoryBalancesIndexQuery & ListPaginationQuery = {},
 ) {
 	return queryOptions({
 		queryKey: inventoryQueryKeys.balancesList(query),
@@ -46,7 +46,7 @@ export function inventoryBalanceDetailQueryOptions(inventoryBalanceId: number) {
 }
 
 export function inventoryMovementsListQueryOptions(
-	query: InventoryMovementsIndexQuery & ListPageQuery = {},
+	query: InventoryMovementsIndexQuery & ListPaginationQuery = {},
 ) {
 	return queryOptions({
 		queryKey: inventoryQueryKeys.movementsList(query),

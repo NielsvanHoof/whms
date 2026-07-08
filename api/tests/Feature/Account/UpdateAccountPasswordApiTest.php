@@ -34,7 +34,7 @@ final class UpdateAccountPasswordApiTest extends TestCase
             'password' => Hash::make('OldPassword123!'),
         ]);
 
-        $token = $this->loginAndGetToken($user, 'OldPassword123!');
+        $token = $this->createApiToken($user);
 
         $this->withToken($token)->putJson('/api/v1/account/password', [
             'current_password' => 'WrongPassword123!',
@@ -54,7 +54,7 @@ final class UpdateAccountPasswordApiTest extends TestCase
             'password' => Hash::make('OldPassword123!'),
         ]);
 
-        $token = $this->loginAndGetToken($user, 'OldPassword123!');
+        $token = $this->createApiToken($user);
 
         $this->withToken($token)->putJson('/api/v1/account/password', [
             'current_password' => 'OldPassword123!',
@@ -82,7 +82,7 @@ final class UpdateAccountPasswordApiTest extends TestCase
             'password' => Hash::make('OldPassword123!'),
         ]);
 
-        $token = $this->loginAndGetToken($user, 'OldPassword123!');
+        $token = $this->createApiToken($user);
 
         $this->withToken($token)->putJson('/api/v1/account/password', [
             'current_password' => 'OldPassword123!',
@@ -91,34 +91,23 @@ final class UpdateAccountPasswordApiTest extends TestCase
         ])
             ->assertNoContent();
 
-        $this->postJson('/api/v1/auth/login', [
+        $this->withHeader('Origin', 'http://localhost:3000')->postJson('/api/v1/auth/login', [
             'email' => 'user@example.com',
             'password' => 'OldPassword123!',
         ])->assertUnprocessable();
 
-        $this->postJson('/api/v1/auth/login', [
+        $this->withHeader('Origin', 'http://localhost:3000')->postJson('/api/v1/auth/login', [
             'email' => 'user@example.com',
             'password' => 'NewPassword123!',
         ])->assertOk()
-            ->assertJsonStructure(['token']);
+            ->assertJsonStructure(['user']);
     }
 
     /**
      * @return non-empty-string
      */
-    private function loginAndGetToken(User $user, string $password): string
+    private function createApiToken(User $user): string
     {
-        $response = $this->postJson('/api/v1/auth/login', [
-            'email' => $user->email,
-            'password' => $password,
-            'device_name' => 'phpunit',
-        ])->assertOk();
-
-        $token = $response->json('token');
-
-        $this->assertIsString($token);
-        $this->assertNotSame('', $token);
-
-        return $token;
+        return $user->createToken('phpunit')->plainTextToken;
     }
 }

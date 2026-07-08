@@ -1,9 +1,6 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import {
-	AUTH_SESSION_COOKIE_NAME,
-	AUTH_SESSION_COOKIE_VALUE,
-} from "./lib/auth";
+import { AUTH_SESSION_COOKIE_NAME } from "./lib/auth";
 
 const LOGIN_PATH = "/login";
 const FORGOT_PASSWORD_PATH = "/forgot-password";
@@ -29,10 +26,7 @@ const PROTECTED_PREFIXES = [
 ] as const;
 
 function hasSessionCookie(request: NextRequest): boolean {
-	return (
-		request.cookies.get(AUTH_SESSION_COOKIE_NAME)?.value ===
-		AUTH_SESSION_COOKIE_VALUE
-	);
+	return Boolean(request.cookies.get(AUTH_SESSION_COOKIE_NAME));
 }
 
 function isProtectedRoute(pathname: string): boolean {
@@ -42,9 +36,8 @@ function isProtectedRoute(pathname: string): boolean {
 }
 
 /**
- * Route protection: authenticated app routes require the session cookie (kept in
- * sync with `localStorage` on the client). `/login` sends authenticated users to
- * the dashboard.
+ * Route protection: authenticated app routes require Laravel's HttpOnly session
+ * cookie. `/login` sends authenticated users to the dashboard.
  */
 export function proxy(request: NextRequest) {
 	const { pathname } = request.nextUrl;

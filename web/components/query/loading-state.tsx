@@ -19,7 +19,7 @@ export function LoadingState({
 	return (
 		<div
 			className={cn(
-				"flex items-center gap-3 rounded-lg bg-muted/40 p-4 text-sm",
+				"flex items-center gap-3 rounded-md bg-muted/40 p-4 text-sm",
 				className,
 			)}
 		>

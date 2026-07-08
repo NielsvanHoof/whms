@@ -9,9 +9,6 @@ export type ListPaginationQuery = {
 	per_page?: number;
 };
 
-/** @deprecated Use `ListPaginationQuery` */
-export type ListPageQuery = ListPaginationQuery;
-
 export function normalizeListPerPage(perPage: number): ListPerPage {
 	return (LIST_PER_PAGE_OPTIONS as readonly number[]).includes(perPage)
 		? (perPage as ListPerPage)

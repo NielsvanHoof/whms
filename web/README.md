@@ -14,9 +14,10 @@ Create `.env.local` in this directory:
 
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_API_SESSION_COOKIE_NAME=laravel-session
 ```
 
-The browser must use `localhost` (not `127.0.0.1`) so CORS matches the API allowlist.
+The browser must use `localhost` (not `127.0.0.1`) so CORS matches the API allowlist. The session cookie name must match the API `SESSION_COOKIE` value (default `laravel-session` when `APP_NAME=Laravel`).
 
 ## Development
 

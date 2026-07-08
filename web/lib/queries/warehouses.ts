@@ -1,6 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 
-import type { ListPageQuery } from "@/lib/api/list-query-params";
+import type { ListPaginationQuery } from "@/lib/api/list-query-params";
 import {
 	listWarehouses,
 	showWarehouse,
@@ -9,14 +9,14 @@ import {
 
 export const warehouseQueryKeys = {
 	all: ["warehouses"] as const,
-	list: (query: WarehousesIndexQuery & ListPageQuery) =>
+	list: (query: WarehousesIndexQuery & ListPaginationQuery) =>
 		[...warehouseQueryKeys.all, "list", query] as const,
 	detail: (warehouseId: number) =>
 		[...warehouseQueryKeys.all, "detail", warehouseId] as const,
 };
 
 export function warehousesListQueryOptions(
-	query: WarehousesIndexQuery & ListPageQuery = {},
+	query: WarehousesIndexQuery & ListPaginationQuery = {},
 ) {
 	return queryOptions({
 		queryKey: warehouseQueryKeys.list(query),

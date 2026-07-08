@@ -24,7 +24,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { updateAccountProfile } from "@/lib/api/account";
-import { patchStoredAuthUser } from "@/lib/auth/auth-session";
 import { handleMutationFormError } from "@/lib/forms/handle-mutation-form-error";
 import { meQueryKeys } from "@/lib/queries/me";
 import {
@@ -63,7 +62,6 @@ export function AccountProfileForm({ defaultName }: AccountProfileFormProps) {
 		onSuccess: async (response) => {
 			setFormError(null);
 			queryClient.setQueryData(meQueryKeys.all, response);
-			patchStoredAuthUser(response.data.user);
 			reset({ name: response.data.user.name });
 			toastSuccess("Profile updated");
 		},

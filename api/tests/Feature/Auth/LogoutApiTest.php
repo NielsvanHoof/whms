@@ -21,29 +21,50 @@ final class LogoutApiTest extends TestCase
             ->assertHeader('content-type', 'application/json');
     }
 
-    public function test_logout_revokes_current_token(): void
+    public function test_logout_invalidates_current_session(): void
     {
         $tenant = Tenant::factory()->create();
-        User::factory()->create([
+        $user = User::factory()->create([
             'tenant_id' => $tenant->id,
             'email' => 'user@example.com',
             'password' => Hash::make('SuperSecret123!'),
         ]);
 
-        $token = $this->postJson('/api/v1/auth/login', [
-            'email' => 'user@example.com',
-            'password' => 'SuperSecret123!',
-            'device_name' => 'phpunit',
-        ])->assertOk()->json('token');
+        $this
+            ->withHeader('Origin', 'http://localhost:3000')
+            ->postJson('/api/v1/auth/login', [
+                'email' => 'user@example.com',
+                'password' => 'SuperSecret123!',
+                'device_name' => 'phpunit',
+            ])->assertOk();
 
-        $this->assertIsString($token);
+        $this->assertAuthenticatedAs($user, 'web');
+
+        $this
+            ->withHeader('Origin', 'http://localhost:3000')
+            ->postJson('/api/v1/auth/logout')->assertNoContent();
+
+        $this->assertGuest('web');
+
+        $this->app['auth']->forgetGuards();
+
+        $this
+            ->withHeader('Origin', 'http://localhost:3000')
+            ->getJson('/api/v1/me')
+            ->assertUnauthorized();
+    }
+
+    public function test_logout_still_revokes_current_api_token(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $user = User::factory()->create(['tenant_id' => $tenant->id]);
+        $token = $user->createToken('phpunit')->plainTextToken;
 
         $this->withToken($token)->postJson('/api/v1/auth/logout')
             ->assertNoContent();
 
         $this->assertDatabaseCount('personal_access_tokens', 0);
 
-        // Simulate a fresh request (auth state can persist on the app instance between test HTTP calls).
         $this->app['auth']->forgetGuards();
 
         $this->withToken($token)->getJson('/api/v1/me')

@@ -1,6 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 
-import type { ListPageQuery } from "@/lib/api/list-query-params";
+import type { ListPaginationQuery } from "@/lib/api/list-query-params";
 import {
 	listProducts,
 	type ProductsIndexQuery,
@@ -9,14 +9,14 @@ import {
 
 export const productQueryKeys = {
 	all: ["products"] as const,
-	list: (query: ProductsIndexQuery & ListPageQuery) =>
+	list: (query: ProductsIndexQuery & ListPaginationQuery) =>
 		[...productQueryKeys.all, "list", query] as const,
 	detail: (productId: number) =>
 		[...productQueryKeys.all, "detail", productId] as const,
 };
 
 export function productsListQueryOptions(
-	query: ProductsIndexQuery & ListPageQuery = {},
+	query: ProductsIndexQuery & ListPaginationQuery = {},
 ) {
 	return queryOptions({
 		queryKey: productQueryKeys.list(query),

@@ -9,15 +9,13 @@ import { FilterControl } from "@/components/filters/filter-control";
 import { ListFilterBar } from "@/components/filters/list-filter-bar";
 import { ListPagination } from "@/components/filters/list-pagination";
 import { SortFilterSelect } from "@/components/filters/sort-filter-select";
-import { PageHeader } from "@/components/layout/page-header";
-import { ErrorState } from "@/components/query/error-state";
-import { LoadingState } from "@/components/query/loading-state";
-import { RefreshingIndicator } from "@/components/query/refreshing-indicator";
+import { ResourceListCard } from "@/components/list/resource-list-card";
+import { ResourceListQueryState } from "@/components/list/resource-list-query-state";
+import { ResourcePage } from "@/components/list/resource-page";
 import { TableEmptyState } from "@/components/query/table-empty-state";
 import { TableRowActions } from "@/components/table/table-row-actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
 	Select,
@@ -37,15 +35,10 @@ import {
 import { useDelayedPending } from "@/hooks/use-delayed-pending";
 import { useDeleteRowMutation } from "@/hooks/use-delete-row-mutation";
 import { usePermissions } from "@/hooks/use-permissions";
-import { deleteProduct } from "@/lib/api/products";
 import { filtersAreDirty, withPaginationParams } from "@/lib/nuqs/filter-utils";
 import { useProductFilters } from "@/lib/nuqs/product-filters";
 import { useListPage } from "@/lib/nuqs/use-list-page";
-import { canManageProducts, canViewProducts } from "@/lib/permissions";
-import {
-	productQueryKeys,
-	productsListQueryOptions,
-} from "@/lib/queries/products";
+import { productListResource } from "@/lib/resources/products";
 
 const sortOptions = [
 	{ value: "__default__", label: "Newest first" },
@@ -83,13 +76,13 @@ export default function ProductsPage() {
 	};
 
 	const permList = permissions.permissions;
-	const canView = canViewProducts(permList);
-	const canCreate = canManageProducts(permList);
-	const canEdit = canManageProducts(permList);
-	const canDelete = canManageProducts(permList);
+	const canView = productListResource.canView(permList);
+	const canCreate = productListResource.canManage(permList);
+	const canEdit = productListResource.canManage(permList);
+	const canDelete = productListResource.canManage(permList);
 
 	const listQuery = useQuery({
-		...productsListQueryOptions(apiQuery),
+		...productListResource.listQueryOptions(apiQuery),
 		placeholderData: (previousData) => previousData,
 	});
 
@@ -99,37 +92,31 @@ export default function ProductsPage() {
 	});
 
 	const { deleteRow, isDeleting } = useDeleteRowMutation({
-		deleteFn: deleteProduct,
-		invalidateQueryKey: productQueryKeys.all,
-		successMessage: "Product deleted",
-		errorMessage: "Could not delete product.",
+		deleteFn: productListResource.deleteFn,
+		invalidateQueryKey: productListResource.invalidateQueryKey,
+		successMessage: productListResource.deleteSuccessMessage,
+		errorMessage: productListResource.deleteErrorMessage,
 	});
 
 	return (
-		<div className="flex flex-col gap-6 p-6">
-			<PageHeader
-				action={
-					canCreate ? (
-						<Button asChild size="sm" variant="outline">
-							<Link href="/products/create">
-								<PlusIcon data-icon="inline-start" />
-								Create product
-							</Link>
-						</Button>
-					) : null
-				}
-				description="Manage product master data."
-				title="Products"
-			/>
-			{!canView ? (
-				<ErrorState
-					description="You do not have permission to view products."
-					title="Access denied"
-				/>
-			) : null}
-
-			{canView ? (
-				<Card>
+		<ResourcePage
+			accessDeniedDescription={productListResource.accessDeniedDescription}
+			action={
+				canCreate ? (
+					<Button asChild size="sm" variant="outline">
+						<Link href={productListResource.createHref}>
+							<PlusIcon data-icon="inline-start" />
+							{productListResource.createLabel}
+						</Link>
+					</Button>
+				) : null
+			}
+			canView={canView}
+			description={productListResource.description}
+			title={productListResource.title}
+		>
+			<ResourceListCard
+				filters={
 					<ListFilterBar
 						isDirty={isDirty}
 						onApply={applyFilters}
@@ -199,108 +186,103 @@ export default function ProductsPage() {
 							value={draft.sort}
 						/>
 					</ListFilterBar>
-					<CardContent className="pt-6">
-						{showPending && !listQuery.data ? (
-							<LoadingState title="Loading products" />
-						) : null}
-						{listQuery.isError ? (
-							<ErrorState
-								error={listQuery.error}
-								isRetrying={listQuery.isFetching && !showPending}
-								onRetry={() => {
-									void listQuery.refetch();
-								}}
-								title="Could not load products"
+				}
+			>
+				<ResourceListQueryState
+					data={listQuery.data}
+					error={listQuery.error}
+					errorTitle={productListResource.errorTitle}
+					isError={listQuery.isError}
+					isFetching={listQuery.isFetching}
+					isPendingVisible={showPending}
+					loadingTitle={productListResource.loadingTitle}
+					onRetry={() => {
+						void listQuery.refetch();
+					}}
+				>
+					{(products) => (
+						<>
+							<ListPagination
+								itemLabel={productListResource.itemLabel}
+								meta={products.meta}
+								onPageChange={goToPage}
+								onPerPageChange={setPerPage}
+								perPage={perPage}
 							/>
-						) : null}
-						{listQuery.data ? (
-							<div className="relative flex flex-col gap-3">
-								{listQuery.isFetching && !showPending ? (
-									<RefreshingIndicator />
-								) : null}
-								<ListPagination
-									itemLabel="product"
-									meta={listQuery.data.meta}
-									onPageChange={goToPage}
-									onPerPageChange={setPerPage}
-									perPage={perPage}
-								/>
-								<Table>
-									<TableHeader>
-										<TableRow>
-											<TableHead>ID</TableHead>
-											<TableHead>SKU</TableHead>
-											<TableHead>Name</TableHead>
-											<TableHead>Unit</TableHead>
-											<TableHead>Status</TableHead>
-											{canEdit || canDelete ? (
-												<TableHead className="text-right">Actions</TableHead>
-											) : null}
-										</TableRow>
-									</TableHeader>
-									<TableBody>
-										{listQuery.data.data.length ? (
-											listQuery.data.data.map((product) => (
-												<TableRow key={product.id}>
-													<TableCell>{product.id}</TableCell>
-													<TableCell>{product.sku}</TableCell>
-													<TableCell className="font-medium">
-														<Link
-															className="hover:underline"
-															href={`/products/${product.id}`}
-														>
-															{product.name}
-														</Link>
-													</TableCell>
-													<TableCell>{product.unit}</TableCell>
-													<TableCell>
-														<Badge
-															variant={
-																product.is_active ? "secondary" : "outline"
+							<Table>
+								<TableHeader>
+									<TableRow>
+										<TableHead>ID</TableHead>
+										<TableHead>SKU</TableHead>
+										<TableHead>Name</TableHead>
+										<TableHead>Unit</TableHead>
+										<TableHead>Status</TableHead>
+										{canEdit || canDelete ? (
+											<TableHead className="text-right">Actions</TableHead>
+										) : null}
+									</TableRow>
+								</TableHeader>
+								<TableBody>
+									{products.data.length ? (
+										products.data.map((product) => (
+											<TableRow key={product.id}>
+												<TableCell>{product.id}</TableCell>
+												<TableCell>{product.sku}</TableCell>
+												<TableCell className="font-medium">
+													<Link
+														className="hover:underline"
+														href={`/products/${product.id}`}
+													>
+														{product.name}
+													</Link>
+												</TableCell>
+												<TableCell>{product.unit}</TableCell>
+												<TableCell>
+													<Badge
+														variant={
+															product.is_active ? "secondary" : "outline"
+														}
+													>
+														{product.is_active ? "Active" : "Inactive"}
+													</Badge>
+												</TableCell>
+												{canEdit || canDelete ? (
+													<TableCell className="text-right">
+														<TableRowActions
+															canDelete={canDelete}
+															canEdit={canEdit}
+															deleteDescription={
+																<>
+																	This permanently removes{" "}
+																	<span className="font-medium text-foreground">
+																		{product.name}
+																	</span>{" "}
+																	({product.sku}). This action cannot be undone.
+																</>
 															}
-														>
-															{product.is_active ? "Active" : "Inactive"}
-														</Badge>
+															deleteTitle="Delete product?"
+															editHref={`/products/${product.id}/edit`}
+															isDeletePending={isDeleting(product.id)}
+															onDelete={() => deleteRow(product.id)}
+														/>
 													</TableCell>
-													{canEdit || canDelete ? (
-														<TableCell className="text-right">
-															<TableRowActions
-																canDelete={canDelete}
-																canEdit={canEdit}
-																deleteDescription={
-																	<>
-																		This permanently removes{" "}
-																		<span className="font-medium text-foreground">
-																			{product.name}
-																		</span>{" "}
-																		({product.sku}). This action cannot be
-																		undone.
-																	</>
-																}
-																deleteTitle="Delete product?"
-																editHref={`/products/${product.id}/edit`}
-																isDeletePending={isDeleting(product.id)}
-																onDelete={() => deleteRow(product.id)}
-															/>
-														</TableCell>
-													) : null}
-												</TableRow>
-											))
-										) : (
-											<TableEmptyState
-												colSpan={canEdit || canDelete ? 6 : 5}
-												description="Try adjusting the filters or create a product before recording inventory."
-												icon={PackageSearchIcon}
-												title="No products found"
-											/>
-										)}
-									</TableBody>
-								</Table>
-							</div>
-						) : null}
-					</CardContent>
-				</Card>
-			) : null}
-		</div>
+												) : null}
+											</TableRow>
+										))
+									) : (
+										<TableEmptyState
+											colSpan={canEdit || canDelete ? 6 : 5}
+											description="Try adjusting the filters or create a product before recording inventory."
+											icon={PackageSearchIcon}
+											title="No products found"
+										/>
+									)}
+								</TableBody>
+							</Table>
+						</>
+					)}
+				</ResourceListQueryState>
+			</ResourceListCard>
+		</ResourcePage>
 	);
 }

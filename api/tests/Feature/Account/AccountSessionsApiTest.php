@@ -31,13 +31,8 @@ final class AccountSessionsApiTest extends TestCase
             'password' => Hash::make('SuperSecret123!'),
         ]);
 
-        $phoneToken = $this->loginAndGetToken($user, 'SuperSecret123!', 'iPhone');
-
-        $this->postJson('/api/v1/auth/login', [
-            'email' => 'user@example.com',
-            'password' => 'SuperSecret123!',
-            'device_name' => 'MacBook',
-        ])->assertOk();
+        $phoneToken = $this->createApiToken($user, 'iPhone');
+        $this->createApiToken($user, 'MacBook');
 
         $this->withToken($phoneToken)->getJson('/api/v1/account/sessions')
             ->assertOk()
@@ -71,7 +66,7 @@ final class AccountSessionsApiTest extends TestCase
 
         $otherUserTokenId = (int) $otherUser->createToken('other-device')->accessToken->id;
 
-        $token = $this->loginAndGetToken($user, 'SuperSecret123!');
+        $token = $this->createApiToken($user);
 
         $this->withToken($token)->deleteJson("/api/v1/account/sessions/{$otherUserTokenId}")
             ->assertNotFound();
@@ -88,13 +83,8 @@ final class AccountSessionsApiTest extends TestCase
             'password' => Hash::make('SuperSecret123!'),
         ]);
 
-        $macToken = $this->postJson('/api/v1/auth/login', [
-            'email' => 'user@example.com',
-            'password' => 'SuperSecret123!',
-            'device_name' => 'MacBook',
-        ])->assertOk()->json('token');
-
-        $phoneToken = $this->loginAndGetToken($user, 'SuperSecret123!', 'iPhone');
+        $macToken = $this->createApiToken($user, 'MacBook');
+        $phoneToken = $this->createApiToken($user, 'iPhone');
 
         $macTokenId = PersonalAccessToken::query()
             ->where('name', 'MacBook')
@@ -123,25 +113,14 @@ final class AccountSessionsApiTest extends TestCase
     public function test_revoke_all_sessions_deletes_every_token_including_current(): void
     {
         $tenant = Tenant::factory()->create();
-        User::factory()->create([
+        $user = User::factory()->create([
             'tenant_id' => $tenant->id,
             'email' => 'user@example.com',
             'password' => Hash::make('SuperSecret123!'),
         ]);
 
-        $this->postJson('/api/v1/auth/login', [
-            'email' => 'user@example.com',
-            'password' => 'SuperSecret123!',
-            'device_name' => 'MacBook',
-        ])->assertOk();
-
-        $phoneToken = $this->postJson('/api/v1/auth/login', [
-            'email' => 'user@example.com',
-            'password' => 'SuperSecret123!',
-            'device_name' => 'iPhone',
-        ])->assertOk()->json('token');
-
-        $this->assertIsString($phoneToken);
+        $this->createApiToken($user, 'MacBook');
+        $phoneToken = $this->createApiToken($user, 'iPhone');
 
         $this->withToken($phoneToken)->deleteJson('/api/v1/account/sessions')
             ->assertNoContent();
@@ -157,19 +136,8 @@ final class AccountSessionsApiTest extends TestCase
     /**
      * @return non-empty-string
      */
-    private function loginAndGetToken(User $user, string $password, ?string $deviceName = 'phpunit'): string
+    private function createApiToken(User $user, ?string $deviceName = 'phpunit'): string
     {
-        $response = $this->postJson('/api/v1/auth/login', [
-            'email' => $user->email,
-            'password' => $password,
-            'device_name' => $deviceName,
-        ])->assertOk();
-
-        $token = $response->json('token');
-
-        $this->assertIsString($token);
-        $this->assertNotSame('', $token);
-
-        return $token;
+        return $user->createToken($deviceName ?? 'phpunit')->plainTextToken;
     }
 }

@@ -1,3 +1,4 @@
+import { parseOptionalDate } from "@/lib/dates";
 import type { components } from "@/lib/openapi/schema";
 
 type BalanceRow = components["schemas"]["InventoryBalanceResource"];
@@ -67,8 +68,8 @@ export function movementActivityByDay(
 ): MovementDayDatum[] {
 	const counts = new Map<string, number>();
 	for (const row of movements) {
-		const date = new Date(row.created_at);
-		if (Number.isNaN(date.getTime())) {
+		const date = parseOptionalDate(row.created_at);
+		if (!date) {
 			continue;
 		}
 		const key = date.toLocaleDateString(undefined, {
