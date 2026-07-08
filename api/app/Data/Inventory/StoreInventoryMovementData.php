@@ -17,6 +17,9 @@ abstract class StoreInventoryMovementData extends Data implements PropertyMorpha
     #[PropertyForMorph]
     public InventoryMovementKind $kind;
 
+    /**
+     * @param  array<string, mixed>  $properties
+     */
     final public static function morph(array $properties): ?string
     {
         $kind = $properties['kind'] ?? null;

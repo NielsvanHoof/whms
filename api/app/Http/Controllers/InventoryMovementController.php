@@ -24,7 +24,6 @@ final class InventoryMovementController extends Controller
         $this->authorize('viewAny', InventoryMovement::class);
 
         $movements = QueryBuilder::for(InventoryMovement::class)
-            ->with(['warehouse', 'location', 'product'])
             ->allowedFilters(
                 AllowedFilter::exact('warehouse_id'),
                 AllowedFilter::exact('location_id'),
@@ -34,6 +33,7 @@ final class InventoryMovementController extends Controller
             )
             ->allowedSorts('id', 'created_at')
             ->defaultSort('-id')
+            ->with(['warehouse', 'location', 'product'])
             ->paginate(request()->input('per_page', 15))
             ->withQueryString();
 

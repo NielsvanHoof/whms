@@ -23,7 +23,6 @@ final class ExportInventoryMovementsController extends Controller
         $this->authorize('viewAny', InventoryMovement::class);
 
         $movements = QueryBuilder::for(InventoryMovement::class)
-            ->with(['warehouse', 'location', 'product'])
             ->allowedFilters(
                 AllowedFilter::exact('warehouse_id'),
                 AllowedFilter::exact('location_id'),
@@ -33,6 +32,7 @@ final class ExportInventoryMovementsController extends Controller
             )
             ->allowedSorts('id', 'created_at')
             ->defaultSort('-id')
+            ->with(['warehouse', 'location', 'product'])
             ->limit(self::EXPORT_LIMIT)
             ->get();
 
@@ -60,7 +60,7 @@ final class ExportInventoryMovementsController extends Controller
             foreach ($movements as $movement) {
                 fputcsv($handle, [
                     $movement->id,
-                    $movement->kind->value,
+                    (string) $movement->kind,
                     $movement->warehouse?->name,
                     $movement->location?->code,
                     $movement->product?->sku,

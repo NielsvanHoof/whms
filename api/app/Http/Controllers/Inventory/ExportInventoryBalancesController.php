@@ -23,7 +23,6 @@ final class ExportInventoryBalancesController extends Controller
         $this->authorize('viewAny', InventoryBalance::class);
 
         $balances = QueryBuilder::for(InventoryBalance::class)
-            ->with(['warehouse', 'location', 'product'])
             ->allowedFilters(
                 AllowedFilter::exact('warehouse_id'),
                 AllowedFilter::exact('location_id'),
@@ -31,6 +30,7 @@ final class ExportInventoryBalancesController extends Controller
             )
             ->allowedSorts('id', 'quantity', 'created_at', 'updated_at')
             ->defaultSort('-id')
+            ->with(['warehouse', 'location', 'product'])
             ->limit(self::EXPORT_LIMIT)
             ->get();
 
