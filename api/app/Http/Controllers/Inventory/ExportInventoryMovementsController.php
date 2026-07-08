@@ -33,8 +33,8 @@ final class ExportInventoryMovementsController extends Controller
             ->allowedSorts('id', 'created_at')
             ->defaultSort('-id')
             ->with(['warehouse', 'location', 'product'])
-            ->limit(self::EXPORT_LIMIT)
-            ->get();
+            ->get()
+            ->take(self::EXPORT_LIMIT);
 
         $filename = 'inventory-movements-'.now()->format('Y-m-d-His').'.csv';
 
@@ -60,7 +60,7 @@ final class ExportInventoryMovementsController extends Controller
             foreach ($movements as $movement) {
                 fputcsv($handle, [
                     $movement->id,
-                    (string) $movement->kind,
+                    (string) $movement->kind->value,
                     $movement->warehouse?->name,
                     $movement->location?->code,
                     $movement->product?->sku,
