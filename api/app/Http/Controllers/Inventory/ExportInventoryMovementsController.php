@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Inventory;
 
 use App\Http\Controllers\Controller;
 use App\Models\InventoryMovement;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
@@ -22,6 +23,9 @@ final class ExportInventoryMovementsController extends Controller
     {
         $this->authorize('viewAny', InventoryMovement::class);
 
+        /**
+         * @var Collection<int, InventoryMovement> $movements
+         */
         $movements = QueryBuilder::for(InventoryMovement::class)
             ->allowedFilters(
                 AllowedFilter::exact('warehouse_id'),
@@ -33,8 +37,7 @@ final class ExportInventoryMovementsController extends Controller
             ->allowedSorts('id', 'created_at')
             ->defaultSort('-id')
             ->with(['warehouse', 'location', 'product'])
-            ->get()
-            ->take(self::EXPORT_LIMIT);
+            ->get();
 
         $filename = 'inventory-movements-'.now()->format('Y-m-d-His').'.csv';
 
