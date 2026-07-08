@@ -64,7 +64,7 @@ final class ExportInventoryMovementsController extends Controller
             foreach ($movements as $movement) {
                 fputcsv($handle, [
                     $movement->id,
-                    (string) $movement->kind->value,
+                    $movement->kind->value,
                     $movement->warehouse?->name,
                     $movement->location?->code,
                     $movement->product?->sku,
