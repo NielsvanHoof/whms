@@ -191,10 +191,12 @@ export default function ProductsPage() {
 				<ResourceListQueryState
 					data={listQuery.data}
 					error={listQuery.error}
+					errorDescription={productListResource.errorDescription}
 					errorTitle={productListResource.errorTitle}
 					isError={listQuery.isError}
 					isFetching={listQuery.isFetching}
 					isPendingVisible={showPending}
+					loadingDescription={productListResource.loadingDescription}
 					loadingTitle={productListResource.loadingTitle}
 					onRetry={() => {
 						void listQuery.refetch();

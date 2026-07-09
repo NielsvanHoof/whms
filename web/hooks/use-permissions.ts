@@ -1,28 +1,16 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-
-import {
-	hasAllPermissions,
-	hasAnyPermission,
-	hasPermission,
-	type PermissionKey,
-} from "@/lib/permissions";
-import { meQueryOptions } from "@/lib/queries/me";
+import { useAuthContext } from "@/components/providers/auth-provider";
 
 export function usePermissions() {
-	const meQuery = useQuery(meQueryOptions());
-
-	const permissions = meQuery.data?.data.permissions ?? [];
+	const auth = useAuthContext();
 
 	return {
-		permissions,
-		me: meQuery.data?.data,
-		isLoading: meQuery.isPending,
-		can: (permission: PermissionKey) => hasPermission(permissions, permission),
-		canAny: (keys: readonly PermissionKey[]) =>
-			hasAnyPermission(permissions, keys),
-		canAll: (keys: readonly PermissionKey[]) =>
-			hasAllPermissions(permissions, keys),
+		permissions: auth.permissions,
+		me: auth.me,
+		isLoading: auth.isLoading,
+		can: auth.can,
+		canAny: auth.canAny,
+		canAll: auth.canAll,
 	};
 }

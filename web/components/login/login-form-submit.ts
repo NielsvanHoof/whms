@@ -1,6 +1,6 @@
 import type { useRouter } from "next/navigation";
 import type { UseFormClearErrors, UseFormSetError } from "react-hook-form";
-import { login, writeStoredAuthSessionFromLogin } from "@/lib/auth";
+import { login, notifyAuthSessionChanged } from "@/lib/auth";
 import { handleMutationFormError } from "@/lib/forms/handle-mutation-form-error";
 import type { LoginFormValues } from "@/lib/schemas/login";
 
@@ -21,11 +21,11 @@ export async function submitLogin(
 	ctx.clearErrors(["email", "password"]);
 
 	try {
-		const result = await login({
+		await login({
 			...values,
 			device_name: "Warehouse Web",
 		});
-		writeStoredAuthSessionFromLogin(result);
+		notifyAuthSessionChanged();
 		ctx.router.replace("/dashboard");
 		ctx.router.refresh();
 	} catch (err) {

@@ -1,14 +1,7 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { useCallback, useEffect, useState } from "react";
-
-import {
-	AUTH_SESSION_CHANGED_EVENT,
-	type AuthSnapshot,
-	logout as clearAuthSession,
-} from "@/lib/auth";
-import { meQueryOptions } from "@/lib/queries/me";
+import { useAuthContext } from "@/components/providers/auth-provider";
+import type { AuthSnapshot } from "@/lib/auth";
 
 export type UseAuthResult =
 	| {
@@ -18,6 +11,7 @@ export type UseAuthResult =
 			isAuthenticated: false;
 			isGuest: false;
 			logout: () => void;
+			refetch: () => void;
 	  }
 	| {
 			status: "guest";
@@ -26,6 +20,17 @@ export type UseAuthResult =
 			isAuthenticated: false;
 			isGuest: true;
 			logout: () => void;
+			refetch: () => void;
+	  }
+	| {
+			status: "session_error";
+			session: null;
+			user: null;
+			isAuthenticated: false;
+			isGuest: false;
+			error: unknown;
+			logout: () => void;
+			refetch: () => void;
 	  }
 	| {
 			status: "authenticated";
@@ -37,71 +42,65 @@ export type UseAuthResult =
 			isAuthenticated: true;
 			isGuest: false;
 			logout: () => void;
+			refetch: () => void;
 	  };
 
 /**
  * Hydration-safe auth state for client components, backed by Sanctum's HttpOnly session cookie.
  */
 export function useAuth(): UseAuthResult {
-	const [snapshot, setSnapshot] = useState<AuthSnapshot | null>(null);
-	const meQuery = useQuery(meQueryOptions());
+	const auth = useAuthContext();
 
-	const logout = useCallback(() => {
-		clearAuthSession();
-		setSnapshot({ status: "guest" });
-	}, []);
-
-	useEffect(() => {
-		const nextSnapshot: AuthSnapshot = meQuery.data
-			? { status: "authenticated", session: { user: meQuery.data.data.user } }
-			: meQuery.isError
-				? { status: "guest" }
-				: { status: "guest" };
-		setSnapshot(meQuery.isPending ? null : nextSnapshot);
-	}, [meQuery.data, meQuery.isError, meQuery.isPending]);
-
-	useEffect(() => {
-		function onAuthSessionChanged() {
-			void meQuery.refetch();
-		}
-
-		window.addEventListener(AUTH_SESSION_CHANGED_EVENT, onAuthSessionChanged);
-		return () => {
-			window.removeEventListener(
-				AUTH_SESSION_CHANGED_EVENT,
-				onAuthSessionChanged,
-			);
-		};
-	}, [meQuery]);
-
-	if (snapshot === null) {
+	if (auth.status === "loading") {
 		return {
 			status: "loading",
 			session: null,
 			user: null,
 			isAuthenticated: false,
 			isGuest: false,
-			logout,
+			logout: auth.logout,
+			refetch: auth.refetch,
 		};
 	}
 
-	if (snapshot.status === "guest") {
+	if (auth.status === "session_error") {
+		return {
+			status: "session_error",
+			session: null,
+			user: null,
+			isAuthenticated: false,
+			isGuest: false,
+			error: auth.error,
+			logout: auth.logout,
+			refetch: auth.refetch,
+		};
+	}
+
+	if (auth.status === "guest") {
 		return {
 			status: "guest",
 			session: null,
 			user: null,
 			isAuthenticated: false,
 			isGuest: true,
-			logout,
+			logout: auth.logout,
+			refetch: auth.refetch,
 		};
 	}
 
 	return {
 		status: "authenticated",
-		session: snapshot.session,
-		user: snapshot.session.user,
+		session: auth.session as Extract<
+			AuthSnapshot,
+			{ status: "authenticated" }
+		>["session"],
+		user: auth.user as Extract<
+			AuthSnapshot,
+			{ status: "authenticated" }
+		>["session"]["user"],
 		isAuthenticated: true,
 		isGuest: false,
-		logout,
+		logout: auth.logout,
+		refetch: auth.refetch,
 	};
 }

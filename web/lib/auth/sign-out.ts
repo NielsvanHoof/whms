@@ -1,19 +1,19 @@
 import type { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
 
 import { logoutApi } from "@/lib/api/account";
-import { logout as clearLocalAuthSession } from "@/lib/auth/auth-session";
+import { notifyAuthSessionCleared } from "@/lib/auth/auth-session";
 
 /**
- * Revokes the current Sanctum token when possible, then clears local session.
+ * Ends the Laravel session cookie when possible, then signals the client to refetch /me.
  */
 export async function signOut(router?: AppRouterInstance): Promise<void> {
 	try {
 		await logoutApi();
 	} catch {
-		// Still clear local session if the API is unreachable or token already invalid.
+		// Still clear local auth view if the API is unreachable or session already invalid.
 	}
 
-	clearLocalAuthSession();
+	notifyAuthSessionCleared();
 
 	if (router) {
 		router.replace("/login");

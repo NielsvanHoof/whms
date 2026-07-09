@@ -1,13 +1,13 @@
+import type { ListPaginationQuery } from "@/lib/api/list-query-params";
+import type { WarehousesIndexQuery } from "@/lib/api/warehouses";
 import { deleteWarehouse } from "@/lib/api/warehouses";
-import {
-	canManageWarehouses,
-	canViewWarehouses,
-	type PermissionKey,
-} from "@/lib/permissions";
+import { canManageWarehouses, canViewWarehouses } from "@/lib/permissions";
 import {
 	warehouseQueryKeys,
 	warehousesListQueryOptions,
 } from "@/lib/queries/warehouses";
+
+import type { ListResource } from "./types";
 
 export const warehouseListResource = {
 	title: "Warehouses",
@@ -27,22 +27,7 @@ export const warehouseListResource = {
 	deleteFn: deleteWarehouse,
 	invalidateQueryKey: warehouseQueryKeys.all,
 	listQueryOptions: warehousesListQueryOptions,
-} satisfies {
-	title: string;
-	description: string;
-	createHref: string;
-	createLabel: string;
-	itemLabel: string;
-	loadingTitle: string;
-	loadingDescription: string;
-	errorTitle: string;
-	errorDescription: string;
-	accessDeniedDescription: string;
-	deleteSuccessMessage: string;
-	deleteErrorMessage: string;
-	canView: (permissions: readonly PermissionKey[] | undefined) => boolean;
-	canManage: (permissions: readonly PermissionKey[] | undefined) => boolean;
-	deleteFn: (id: number) => Promise<void>;
-	invalidateQueryKey: readonly unknown[];
-	listQueryOptions: typeof warehousesListQueryOptions;
-};
+} satisfies ListResource<
+	WarehousesIndexQuery & ListPaginationQuery,
+	typeof warehousesListQueryOptions
+>;

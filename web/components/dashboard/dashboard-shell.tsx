@@ -13,6 +13,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 import { AppBreadcrumbs } from "@/components/navigation/app-breadcrumbs";
+import { ErrorState } from "@/components/query/error-state";
 import { ModeToggle } from "@/components/theme/mode-toggle";
 import { Button } from "@/components/ui/button";
 import {
@@ -48,6 +49,22 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 			router.replace("/login");
 		}
 	}, [auth.status, router]);
+
+	if (auth.status === "session_error") {
+		return (
+			<div className="flex min-h-full flex-1 items-center justify-center p-6">
+				<div className="w-full max-w-2xl">
+					<ErrorState
+						description="Your session could not be verified. Check that the API is running and try again."
+						error={auth.error}
+						isRetrying={false}
+						onRetry={auth.refetch}
+						title="Could not verify session"
+					/>
+				</div>
+			</div>
+		);
+	}
 
 	if (auth.status !== "authenticated" || !auth.user) {
 		return (
