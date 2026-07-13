@@ -10,6 +10,9 @@ use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 
+/**
+ * @implements WithMapping<InventoryBalance>
+ */
 final class InventoryBalancesExport implements FromCollection, WithHeadings, WithMapping
 {
     /**
