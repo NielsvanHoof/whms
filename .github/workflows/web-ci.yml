@@ -37,10 +37,6 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: web/package-lock.json
-          key: ${CI_COMMIT_REF_SLUG}
-          paths:
-            - node_modules/
-            - .next/cache/
 
       - name: Install dependencies
         run: npm ci
