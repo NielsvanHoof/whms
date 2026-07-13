@@ -4,24 +4,31 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Inventory;
 
+use App\Exports\InventoryBalancesExport;
 use App\Http\Controllers\Controller;
 use App\Models\InventoryBalance;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
+use Maatwebsite\Excel\Excel as ExcelWriter;
+use Maatwebsite\Excel\Facades\Excel;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 final class ExportInventoryBalancesController extends Controller
 {
     private const int EXPORT_LIMIT = 10_000;
 
     /**
-     * Stream on-hand stock balances as CSV for the current tenant.
+     * Download on-hand stock balances as CSV for the current tenant.
      */
-    public function __invoke(Request $request): StreamedResponse
+    public function __invoke(Request $request): BinaryFileResponse
     {
         $this->authorize('viewAny', InventoryBalance::class);
 
+        /**
+         * @var Collection<int, InventoryBalance> $balances
+         */
         $balances = QueryBuilder::for(InventoryBalance::class)
             ->allowedFilters(
                 AllowedFilter::exact('warehouse_id'),
@@ -36,38 +43,11 @@ final class ExportInventoryBalancesController extends Controller
 
         $filename = 'inventory-balances-'.now()->format('Y-m-d-His').'.csv';
 
-        return response()->streamDownload(function () use ($balances): void {
-            $handle = fopen('php://output', 'w');
-
-            if ($handle === false) {
-                return;
-            }
-
-            fputcsv($handle, [
-                'id',
-                'warehouse',
-                'location',
-                'product_sku',
-                'product_name',
-                'quantity',
-                'updated_at',
-            ]);
-
-            foreach ($balances as $balance) {
-                fputcsv($handle, [
-                    $balance->id,
-                    $balance->warehouse?->name,
-                    $balance->location?->code,
-                    $balance->product?->sku,
-                    $balance->product?->name,
-                    $balance->quantity,
-                    $balance->updated_at?->toIso8601String(),
-                ]);
-            }
-
-            fclose($handle);
-        }, $filename, [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-        ]);
+        return Excel::download(
+            new InventoryBalancesExport($balances),
+            $filename,
+            ExcelWriter::CSV,
+            ['Content-Type' => 'text/csv; charset=UTF-8'],
+        );
     }
 }

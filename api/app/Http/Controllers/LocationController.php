@@ -22,6 +22,11 @@ final class LocationController extends Controller
     {
         $this->authorize('viewAny', Location::class);
 
+        $perPage = min(
+            max(request()->integer('per_page', 15), 1),
+            100
+        );
+
         $locations = QueryBuilder::for(Location::class)
             ->allowedFilters(
                 AllowedFilter::exact('warehouse_id'),
@@ -30,7 +35,7 @@ final class LocationController extends Controller
             )
             ->allowedSorts('id', 'warehouse_id', 'code', 'type', 'created_at')
             ->defaultSort('-id')
-            ->paginate(request()->input('per_page', 15))
+            ->paginate($perPage)
             ->withQueryString();
 
         return LocationResource::collection($locations);

@@ -77,5 +77,5 @@ jobs:
       - name: Run PHPStan
         run: composer run analyze
 
-      - name: Run PHPUnit
+      - name: Run tests
         run: php artisan test --compact

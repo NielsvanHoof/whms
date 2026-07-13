@@ -22,6 +22,11 @@ final class ProductController extends Controller
     {
         $this->authorize('viewAny', Product::class);
 
+        $perPage = min(
+            max(request()->integer('per_page', 15), 1),
+            100
+        );
+
         $products = QueryBuilder::for(Product::class)
             ->allowedFilters(
                 AllowedFilter::partial('name'),
@@ -31,7 +36,7 @@ final class ProductController extends Controller
             )
             ->allowedSorts('id', 'sku', 'name', 'unit', 'is_active', 'created_at')
             ->defaultSort('-id')
-            ->paginate(request()->input('per_page', 15))
+            ->paginate($perPage)
             ->withQueryString();
 
         return ProductResource::collection($products);

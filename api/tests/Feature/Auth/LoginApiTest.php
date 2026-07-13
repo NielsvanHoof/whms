@@ -2,70 +2,58 @@
 
 declare(strict_types=1);
 
-namespace Tests\Feature\Auth;
-
 use App\Models\Tenant;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
-use Tests\TestCase;
 
-final class LoginApiTest extends TestCase
-{
-    use RefreshDatabase;
+it('requires email and password for login', function () {
+    $response = $this->postJson('/api/v1/auth/login', []);
 
-    public function test_login_requires_email_and_password(): void
-    {
-        $response = $this->postJson('/api/v1/auth/login', []);
+    $response->assertUnprocessable()
+        ->assertHeader('content-type', 'application/json');
+});
 
-        $response->assertUnprocessable()
-            ->assertHeader('content-type', 'application/json');
-    }
+it('rejects invalid login credentials', function () {
+    $tenant = Tenant::factory()->create();
+    User::factory()->create([
+        'tenant_id' => $tenant->id,
+        'email' => 'user@example.com',
+        'password' => Hash::make('SuperSecret123!'),
+    ]);
 
-    public function test_login_rejects_invalid_credentials(): void
-    {
-        $tenant = Tenant::factory()->create();
-        User::factory()->create([
-            'tenant_id' => $tenant->id,
+    $response = $this->postJson('/api/v1/auth/login', [
+        'email' => 'user@example.com',
+        'password' => 'WrongPassword123!',
+    ]);
+
+    $response->assertUnprocessable()
+        ->assertJsonValidationErrors(['email']);
+});
+
+it('creates a session for valid login credentials', function () {
+    $tenant = Tenant::factory()->create();
+    $user = User::factory()->create([
+        'tenant_id' => $tenant->id,
+        'email' => 'user@example.com',
+        'password' => Hash::make('SuperSecret123!'),
+    ]);
+
+    $this->withHeader('Origin', 'http://localhost:3000')
+        ->get('/sanctum/csrf-cookie');
+
+    $response = $this
+        ->withHeader('Origin', 'http://localhost:3000')
+        ->postJson('/api/v1/auth/login', [
             'email' => 'user@example.com',
-            'password' => Hash::make('SuperSecret123!'),
+            'password' => 'SuperSecret123!',
+            'device_name' => 'phpunit',
         ]);
 
-        $response = $this->postJson('/api/v1/auth/login', [
-            'email' => 'user@example.com',
-            'password' => 'WrongPassword123!',
-        ]);
+    $response->assertOk()
+        ->assertJsonMissingPath('token')
+        ->assertJsonMissingPath('token_type')
+        ->assertJsonPath('user.id', $user->id)
+        ->assertJsonStructure(['user' => ['id', 'tenant_id', 'name', 'email']]);
 
-        $response->assertUnprocessable()
-            ->assertJsonValidationErrors(['email']);
-    }
-
-    public function test_login_creates_session_for_valid_credentials(): void
-    {
-        $tenant = Tenant::factory()->create();
-        $user = User::factory()->create([
-            'tenant_id' => $tenant->id,
-            'email' => 'user@example.com',
-            'password' => Hash::make('SuperSecret123!'),
-        ]);
-
-        $this->withHeader('Origin', 'http://localhost:3000')
-            ->get('/sanctum/csrf-cookie');
-
-        $response = $this
-            ->withHeader('Origin', 'http://localhost:3000')
-            ->postJson('/api/v1/auth/login', [
-                'email' => 'user@example.com',
-                'password' => 'SuperSecret123!',
-                'device_name' => 'phpunit',
-            ]);
-
-        $response->assertOk()
-            ->assertJsonMissingPath('token')
-            ->assertJsonMissingPath('token_type')
-            ->assertJsonPath('user.id', $user->id)
-            ->assertJsonStructure(['user' => ['id', 'tenant_id', 'name', 'email']]);
-
-        $this->assertAuthenticatedAs($user, 'web');
-    }
-}
+    $this->assertAuthenticatedAs($user, 'web');
+});

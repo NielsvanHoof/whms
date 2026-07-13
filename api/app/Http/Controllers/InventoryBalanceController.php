@@ -19,6 +19,11 @@ final class InventoryBalanceController extends Controller
     {
         $this->authorize('viewAny', InventoryBalance::class);
 
+        $perPage = min(
+            max(request()->integer('per_page', 15), 1),
+            100
+        );
+
         $balances = QueryBuilder::for(InventoryBalance::class)
             ->allowedFilters(
                 AllowedFilter::exact('warehouse_id'),
@@ -28,7 +33,7 @@ final class InventoryBalanceController extends Controller
             ->allowedSorts('id', 'quantity', 'created_at', 'updated_at')
             ->defaultSort('-id')
             ->with(['warehouse', 'location', 'product'])
-            ->paginate(request()->input('per_page', 15))
+            ->paginate($perPage)
             ->withQueryString();
 
         return InventoryBalanceResource::collection($balances);

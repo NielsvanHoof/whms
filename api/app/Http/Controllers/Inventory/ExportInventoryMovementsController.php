@@ -4,22 +4,25 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Inventory;
 
+use App\Exports\InventoryMovementsExport;
 use App\Http\Controllers\Controller;
 use App\Models\InventoryMovement;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
+use Maatwebsite\Excel\Excel as ExcelWriter;
+use Maatwebsite\Excel\Facades\Excel;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 final class ExportInventoryMovementsController extends Controller
 {
     private const int EXPORT_LIMIT = 10_000;
 
     /**
-     * Stream inventory movement history as CSV for the current tenant.
+     * Download inventory movement history as CSV for the current tenant.
      */
-    public function __invoke(Request $request): StreamedResponse
+    public function __invoke(Request $request): BinaryFileResponse
     {
         $this->authorize('viewAny', InventoryMovement::class);
 
@@ -42,42 +45,11 @@ final class ExportInventoryMovementsController extends Controller
 
         $filename = 'inventory-movements-'.now()->format('Y-m-d-His').'.csv';
 
-        return response()->streamDownload(function () use ($movements): void {
-            $handle = fopen('php://output', 'w');
-
-            if ($handle === false) {
-                return;
-            }
-
-            fputcsv($handle, [
-                'id',
-                'kind',
-                'warehouse',
-                'location',
-                'product_sku',
-                'product_name',
-                'quantity_delta',
-                'transfer_correlation_id',
-                'created_at',
-            ]);
-
-            foreach ($movements as $movement) {
-                fputcsv($handle, [
-                    $movement->id,
-                    $movement->getRawOriginal('kind'),
-                    $movement->warehouse?->name,
-                    $movement->location?->code,
-                    $movement->product?->sku,
-                    $movement->product?->name,
-                    $movement->quantity_delta,
-                    $movement->transfer_correlation_id,
-                    $movement->created_at?->toIso8601String(),
-                ]);
-            }
-
-            fclose($handle);
-        }, $filename, [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-        ]);
+        return Excel::download(
+            new InventoryMovementsExport($movements),
+            $filename,
+            ExcelWriter::CSV,
+            ['Content-Type' => 'text/csv; charset=UTF-8'],
+        );
     }
 }

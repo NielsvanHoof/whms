@@ -2,54 +2,39 @@
 
 declare(strict_types=1);
 
-namespace Tests\Feature\Auth;
-
 use App\Models\Tenant;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\Concerns\InteractsWithRbac;
-use Tests\TestCase;
 
-final class MeApiTest extends TestCase
-{
-    use InteractsWithRbac;
-    use RefreshDatabase;
+uses(InteractsWithRbac::class);
 
-    protected function setUp(): void
-    {
-        parent::setUp();
+beforeEach(fn () => $this->seedRbac());
 
-        $this->seedRbac();
-    }
+it('requires authentication for me endpoint', function () {
+    $this->getJson('/api/v1/me')
+        ->assertUnauthorized()
+        ->assertHeader('content-type', 'application/json');
+});
 
-    public function test_me_requires_authentication(): void
-    {
-        $this->getJson('/api/v1/me')
-            ->assertUnauthorized()
-            ->assertHeader('content-type', 'application/json');
-    }
+it('returns user roles and flattened permissions', function () {
+    $tenant = Tenant::factory()->create();
+    $user = User::factory()->create(['tenant_id' => $tenant->id]);
+    $this->assignRole($user, 'manager');
 
-    public function test_me_returns_user_roles_and_flattened_permissions(): void
-    {
-        $tenant = Tenant::factory()->create();
-        $user = User::factory()->create(['tenant_id' => $tenant->id]);
-        $this->assignRole($user, 'manager');
+    Sanctum::actingAs($user);
 
-        Sanctum::actingAs($user);
-
-        $this->getJson('/api/v1/me')
-            ->assertOk()
-            ->assertJsonPath('data.user.id', $user->id)
-            ->assertJsonPath('data.user.tenant_id', $tenant->id)
-            ->assertJsonPath('data.user.email', $user->email)
-            ->assertJsonPath('data.tenant.id', $tenant->id)
-            ->assertJsonPath('data.tenant.name', $tenant->name)
-            ->assertJsonPath('data.tenant.slug', $tenant->slug)
-            ->assertJsonFragment(['manager'])
-            ->assertJsonFragment(['warehouses.view'])
-            ->assertJsonFragment(['products.manage'])
-            ->assertJsonFragment(['inventory.view'])
-            ->assertJsonFragment(['roles.manage']);
-    }
-}
+    $this->getJson('/api/v1/me')
+        ->assertOk()
+        ->assertJsonPath('data.user.id', $user->id)
+        ->assertJsonPath('data.user.tenant_id', $tenant->id)
+        ->assertJsonPath('data.user.email', $user->email)
+        ->assertJsonPath('data.tenant.id', $tenant->id)
+        ->assertJsonPath('data.tenant.name', $tenant->name)
+        ->assertJsonPath('data.tenant.slug', $tenant->slug)
+        ->assertJsonFragment(['manager'])
+        ->assertJsonFragment(['warehouses.view'])
+        ->assertJsonFragment(['products.manage'])
+        ->assertJsonFragment(['inventory.view'])
+        ->assertJsonFragment(['roles.manage']);
+});

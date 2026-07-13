@@ -15,7 +15,10 @@ return new class extends Migration
     {
         Schema::create('products', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('tenant_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('tenant_id')
+                ->constrained()
+                ->cascadeOnDelete();
+
             $table->string('sku', 64);
             $table->string('name');
             $table->string('unit', 32);
@@ -23,6 +26,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->unique(['tenant_id', 'sku']);
+            $table->index(['tenant_id', 'is_active', 'id']);
         });
     }
 

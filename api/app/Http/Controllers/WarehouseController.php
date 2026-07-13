@@ -22,6 +22,11 @@ final class WarehouseController extends Controller
     {
         $this->authorize('viewAny', Warehouse::class);
 
+        $perPage = min(
+            max(request()->integer('per_page', 15), 1),
+            100
+        );
+
         $warehouses = QueryBuilder::for(Warehouse::class)
             ->allowedFilters(
                 AllowedFilter::partial('name'),
@@ -29,7 +34,7 @@ final class WarehouseController extends Controller
             )
             ->allowedSorts('id', 'name', 'code', 'created_at')
             ->defaultSort('-id')
-            ->paginate(request()->input('per_page', 15))
+            ->paginate($perPage)
             ->withQueryString();
 
         return WarehouseResource::collection($warehouses);

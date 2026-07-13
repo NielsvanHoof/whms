@@ -2,201 +2,176 @@
 
 declare(strict_types=1);
 
-namespace Tests\Feature;
-
 use App\Models\Tenant;
 use App\Models\User;
 use App\Models\Warehouse;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Laravel\Sanctum\Sanctum;
 use Tests\Concerns\InteractsWithRbac;
-use Tests\TestCase;
 
-final class WarehouseApiTest extends TestCase
-{
-    use InteractsWithRbac;
-    use RefreshDatabase;
+uses(InteractsWithRbac::class);
 
-    protected function setUp(): void
-    {
-        parent::setUp();
+beforeEach(fn () => $this->seedRbac());
 
-        $this->seedRbac();
-    }
+it('requires authentication for warehouses', function () {
+    $this->getJson('/api/v1/warehouses')
+        ->assertUnauthorized()
+        ->assertHeader('content-type', 'application/json');
+});
 
-    public function test_warehouses_require_authentication(): void
-    {
-        $this->getJson('/api/v1/warehouses')
-            ->assertUnauthorized()
-            ->assertHeader('content-type', 'application/json');
-    }
+it('requires authentication for warehouses without json accept header', function () {
+    $this->get('/api/v1/warehouses')
+        ->assertUnauthorized()
+        ->assertHeader('content-type', 'application/json');
+});
 
-    /**
-     * Browsers often omit Accept: application/json; auth middleware must not resolve route('login').
-     */
-    public function test_warehouses_require_authentication_without_json_accept_header(): void
-    {
-        $this->get('/api/v1/warehouses')
-            ->assertUnauthorized()
-            ->assertHeader('content-type', 'application/json');
-    }
+it('allows authenticated user to list and create warehouses', function () {
+    $tenant = Tenant::factory()->create();
+    $user = User::factory()->create([
+        'tenant_id' => $tenant->id,
+        'password' => Hash::make('password'),
+    ]);
+    $this->assignRole($user, 'manager');
 
-    public function test_authenticated_user_can_list_and_create_warehouses(): void
-    {
-        $tenant = Tenant::factory()->create();
-        $user = User::factory()->create([
-            'tenant_id' => $tenant->id,
-            'password' => Hash::make('password'),
-        ]);
-        $this->assignRole($user, 'manager');
+    Sanctum::actingAs($user);
 
-        Sanctum::actingAs($user);
+    $this->getJson('/api/v1/warehouses')
+        ->assertOk()
+        ->assertJsonPath('data', []);
 
-        $this->getJson('/api/v1/warehouses')
-            ->assertOk()
-            ->assertJsonPath('data', []);
+    $create = $this->postJson('/api/v1/warehouses', [
+        'name' => 'Main DC',
+        'code' => 'MAIN-01',
+    ]);
 
-        $create = $this->postJson('/api/v1/warehouses', [
-            'name' => 'Main DC',
-            'code' => 'MAIN-01',
-        ]);
+    $create->assertCreated()
+        ->assertJsonPath('data.name', 'Main DC')
+        ->assertJsonPath('data.code', 'MAIN-01')
+        ->assertJsonPath('data.tenant_id', $tenant->id);
 
-        $create->assertCreated()
-            ->assertJsonPath('data.name', 'Main DC')
-            ->assertJsonPath('data.code', 'MAIN-01')
-            ->assertJsonPath('data.tenant_id', $tenant->id);
+    $this->getJson('/api/v1/warehouses')
+        ->assertOk()
+        ->assertJsonCount(1, 'data');
+});
 
-        $this->getJson('/api/v1/warehouses')
-            ->assertOk()
-            ->assertJsonCount(1, 'data');
-    }
+it('allows authenticated user to filter and sort warehouses', function () {
+    $tenant = Tenant::factory()->create();
+    $user = User::factory()->create(['tenant_id' => $tenant->id]);
+    $this->assignRole($user, 'manager');
 
-    public function test_authenticated_user_can_filter_and_sort_warehouses(): void
-    {
-        $tenant = Tenant::factory()->create();
-        $user = User::factory()->create(['tenant_id' => $tenant->id]);
-        $this->assignRole($user, 'manager');
+    Sanctum::actingAs($user);
 
-        Sanctum::actingAs($user);
+    Warehouse::create([
+        'tenant_id' => $tenant->id,
+        'name' => 'Alpha Storage',
+        'code' => 'ALPHA',
+    ]);
 
-        Warehouse::create([
-            'tenant_id' => $tenant->id,
-            'name' => 'Alpha Storage',
-            'code' => 'ALPHA',
-        ]);
+    Warehouse::create([
+        'tenant_id' => $tenant->id,
+        'name' => 'Beta Hub',
+        'code' => 'BETA',
+    ]);
 
-        Warehouse::create([
-            'tenant_id' => $tenant->id,
-            'name' => 'Beta Hub',
-            'code' => 'BETA',
-        ]);
+    $this->getJson('/api/v1/warehouses?filter[name]=Alpha')
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.code', 'ALPHA');
 
-        $this->getJson('/api/v1/warehouses?filter[name]=Alpha')
-            ->assertOk()
-            ->assertJsonCount(1, 'data')
-            ->assertJsonPath('data.0.code', 'ALPHA');
+    $this->getJson('/api/v1/warehouses?filter[code]=BETA')
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.name', 'Beta Hub');
 
-        $this->getJson('/api/v1/warehouses?filter[code]=BETA')
-            ->assertOk()
-            ->assertJsonCount(1, 'data')
-            ->assertJsonPath('data.0.name', 'Beta Hub');
+    $this->getJson('/api/v1/warehouses?sort=name')
+        ->assertOk()
+        ->assertJsonPath('data.0.name', 'Alpha Storage')
+        ->assertJsonPath('data.1.name', 'Beta Hub');
+});
 
-        $this->getJson('/api/v1/warehouses?sort=name')
-            ->assertOk()
-            ->assertJsonPath('data.0.name', 'Alpha Storage')
-            ->assertJsonPath('data.1.name', 'Beta Hub');
-    }
+it('validates required fields when storing warehouse', function () {
+    $tenant = Tenant::factory()->create();
+    $user = User::factory()->create(['tenant_id' => $tenant->id]);
+    $this->assignRole($user, 'manager');
 
-    public function test_store_warehouse_validates_required_fields(): void
-    {
-        $tenant = Tenant::factory()->create();
-        $user = User::factory()->create(['tenant_id' => $tenant->id]);
-        $this->assignRole($user, 'manager');
+    Sanctum::actingAs($user);
 
-        Sanctum::actingAs($user);
+    $this->postJson('/api/v1/warehouses', [])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['name']);
+});
 
-        $this->postJson('/api/v1/warehouses', [])
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors(['name']);
-    }
+it('rejects duplicate warehouse code within tenant', function () {
+    $tenant = Tenant::factory()->create();
+    $user = User::factory()->create(['tenant_id' => $tenant->id]);
+    $this->assignRole($user, 'manager');
 
-    public function test_store_warehouse_rejects_duplicate_code_within_tenant(): void
-    {
-        $tenant = Tenant::factory()->create();
-        $user = User::factory()->create(['tenant_id' => $tenant->id]);
-        $this->assignRole($user, 'manager');
+    Sanctum::actingAs($user);
 
-        Sanctum::actingAs($user);
+    $this->postJson('/api/v1/warehouses', [
+        'name' => 'First',
+        'code' => 'DUP',
+    ])->assertCreated();
 
-        $this->postJson('/api/v1/warehouses', [
-            'name' => 'First',
-            'code' => 'DUP',
-        ])->assertCreated();
+    $this->postJson('/api/v1/warehouses', [
+        'name' => 'Second',
+        'code' => 'DUP',
+    ])->assertUnprocessable()
+        ->assertJsonValidationErrors(['code']);
+});
 
-        $this->postJson('/api/v1/warehouses', [
-            'name' => 'Second',
-            'code' => 'DUP',
-        ])->assertUnprocessable()
-            ->assertJsonValidationErrors(['code']);
-    }
+it('prevents user from viewing warehouse from another tenant', function () {
+    $tenantA = Tenant::factory()->create();
+    $tenantB = Tenant::factory()->create();
+    $userA = User::factory()->create(['tenant_id' => $tenantA->id]);
+    $this->assignRole($userA, 'manager');
 
-    public function test_user_cannot_view_warehouse_from_another_tenant(): void
-    {
-        $tenantA = Tenant::factory()->create();
-        $tenantB = Tenant::factory()->create();
-        $userA = User::factory()->create(['tenant_id' => $tenantA->id]);
-        $this->assignRole($userA, 'manager');
+    $warehouseB = Warehouse::withoutGlobalScopes()->create([
+        'tenant_id' => $tenantB->id,
+        'name' => 'Other tenant',
+        'code' => 'OTHER',
+    ]);
 
-        $warehouseB = Warehouse::withoutGlobalScopes()->create([
-            'tenant_id' => $tenantB->id,
-            'name' => 'Other tenant',
-            'code' => 'OTHER',
-        ]);
+    Sanctum::actingAs($userA);
 
-        Sanctum::actingAs($userA);
+    $this->getJson('/api/v1/warehouses/'.$warehouseB->id)
+        ->assertNotFound();
+});
 
-        $this->getJson('/api/v1/warehouses/'.$warehouseB->id)
-            ->assertNotFound();
-    }
+it('allows user to update and delete own tenant warehouse', function () {
+    $tenant = Tenant::factory()->create();
+    $user = User::factory()->create(['tenant_id' => $tenant->id]);
+    $this->assignRole($user, 'manager');
 
-    public function test_user_can_update_and_delete_own_tenant_warehouse(): void
-    {
-        $tenant = Tenant::factory()->create();
-        $user = User::factory()->create(['tenant_id' => $tenant->id]);
-        $this->assignRole($user, 'manager');
+    Sanctum::actingAs($user);
 
-        Sanctum::actingAs($user);
+    $id = $this->postJson('/api/v1/warehouses', [
+        'name' => 'Original',
+        'code' => 'O-1',
+    ])->json('data.id');
 
-        $id = $this->postJson('/api/v1/warehouses', [
-            'name' => 'Original',
-            'code' => 'O-1',
-        ])->json('data.id');
+    $this->putJson('/api/v1/warehouses/'.$id, [
+        'name' => 'Renamed',
+        'warehouse_id' => $id,
+    ])->assertOk()
+        ->assertJsonPath('data.name', 'Renamed');
 
-        $this->putJson('/api/v1/warehouses/'.$id, [
-            'name' => 'Renamed',
-            'warehouse_id' => $id,
-        ])->assertOk()
-            ->assertJsonPath('data.name', 'Renamed');
+    $this->deleteJson('/api/v1/warehouses/'.$id)
+        ->assertNoContent();
 
-        $this->deleteJson('/api/v1/warehouses/'.$id)
-            ->assertNoContent();
+    $this->getJson('/api/v1/warehouses/'.$id)
+        ->assertNotFound();
+});
 
-        $this->getJson('/api/v1/warehouses/'.$id)
-            ->assertNotFound();
-    }
+it('prevents viewer from creating warehouse', function () {
+    $tenant = Tenant::factory()->create();
+    $user = User::factory()->create(['tenant_id' => $tenant->id]);
+    $this->assignRole($user, 'viewer');
 
-    public function test_viewer_cannot_create_warehouse(): void
-    {
-        $tenant = Tenant::factory()->create();
-        $user = User::factory()->create(['tenant_id' => $tenant->id]);
-        $this->assignRole($user, 'viewer');
+    Sanctum::actingAs($user);
 
-        Sanctum::actingAs($user);
-
-        $this->postJson('/api/v1/warehouses', [
-            'name' => 'Denied Warehouse',
-            'code' => 'DENIED',
-        ])->assertForbidden();
-    }
-}
+    $this->postJson('/api/v1/warehouses', [
+        'name' => 'Denied Warehouse',
+        'code' => 'DENIED',
+    ])->assertForbidden();
+});

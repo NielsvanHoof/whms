@@ -2,32 +2,17 @@
 
 declare(strict_types=1);
 
-namespace Tests\Feature;
+it('returns json ok from api v1 health endpoint', function () {
+    $response = $this->getJson('/api/v1/health');
 
-use Tests\TestCase;
+    $response->assertOk()
+        ->assertHeader('content-type', 'application/json')
+        ->assertJson(['status' => 'ok']);
+});
 
-final class ApiRoutingTest extends TestCase
-{
-    /**
-     * Versioned API health endpoint is reachable under /api/v1.
-     */
-    public function test_api_v1_health_returns_json_ok(): void
-    {
-        $response = $this->getJson('/api/v1/health');
+it('returns json for unknown api route when requested as json', function () {
+    $response = $this->getJson('/api/v1/does-not-exist');
 
-        $response->assertOk()
-            ->assertHeader('content-type', 'application/json')
-            ->assertJson(['status' => 'ok']);
-    }
-
-    /**
-     * JSON clients should receive JSON for not found under the API prefix.
-     */
-    public function test_api_unknown_route_returns_json_when_requested_as_json(): void
-    {
-        $response = $this->getJson('/api/v1/does-not-exist');
-
-        $response->assertNotFound()
-            ->assertHeader('content-type', 'application/json');
-    }
-}
+    $response->assertNotFound()
+        ->assertHeader('content-type', 'application/json');
+});
