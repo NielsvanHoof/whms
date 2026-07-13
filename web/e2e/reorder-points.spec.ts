@@ -43,9 +43,7 @@ test.describe("reorder points and low stock", () => {
 		await page.locator("#reorder-point-location").click();
 		await page.getByRole("option", { name: new RegExp(locationCode) }).click();
 		await page.getByLabel("Reorder threshold").fill("15");
-		await page
-			.getByRole("button", { name: "Create reorder point" })
-			.click();
+		await page.getByRole("button", { name: "Create reorder point" }).click();
 		await expect(page).toHaveURL(/\/inventory\/reorder-points$/, {
 			timeout: 15_000,
 		});
