@@ -2,6 +2,7 @@
 
 import { DashboardCharts } from "@/components/dashboard/dashboard-charts";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
+import { DashboardLowStockPanel } from "@/components/dashboard/dashboard-low-stock-panel";
 import { DashboardQuickActions } from "@/components/dashboard/dashboard-quick-actions";
 import { DashboardRecentMovements } from "@/components/dashboard/dashboard-recent-movements";
 import { DashboardStatsGrid } from "@/components/dashboard/dashboard-stats-grid";
@@ -29,6 +30,7 @@ export function DashboardOverview() {
 				<div className="flex flex-col gap-6 lg:col-span-2">
 					{showInventoryPanels ? (
 						<>
+							<DashboardLowStockPanel permissions={permissions} />
 							<DashboardRecentMovements permissions={permissions} />
 							<DashboardStockSnapshot permissions={permissions} />
 						</>

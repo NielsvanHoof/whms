@@ -48,7 +48,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Stream on-hand stock balances as CSV for the current tenant */
+        /** Download on-hand stock balances as CSV for the current tenant */
         get: operations["inventory.exportInventoryBalances"];
         put?: never;
         post?: never;
@@ -65,7 +65,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Stream inventory movement history as CSV for the current tenant */
+        /** Download inventory movement history as CSV for the current tenant */
         get: operations["inventory.exportInventoryMovements"];
         put?: never;
         post?: never;
@@ -226,7 +226,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Exchange email and password for a Sanctum personal access token */
+        /** Authenticate the first-party SPA using Laravel's session guard */
         post: operations["auth.login"];
         delete?: never;
         options?: never;
@@ -244,6 +244,23 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["auth.logout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reorder-points/low-stock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Reorder points whose current on-hand quantity has dropped to or below their threshold */
+        get: operations["inventory.lowStock"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -298,6 +315,43 @@ export interface paths {
         post?: never;
         /** Remove the specified product */
         delete: operations["products.destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reorder-points": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Display a paginated listing of reorder points for the current tenant */
+        get: operations["reorder-points.index"];
+        put?: never;
+        /** Store a newly created reorder point */
+        post: operations["reorder-points.store"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reorder-points/{reorderPoint}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Display the specified reorder point */
+        get: operations["reorder-points.show"];
+        /** Update the specified reorder point's threshold quantity */
+        put: operations["reorder-points.update"];
+        post?: never;
+        /** Remove the specified reorder point */
+        delete: operations["reorder-points.destroy"];
         options?: never;
         head?: never;
         patch?: never;
@@ -590,6 +644,17 @@ export interface components {
             password: string;
             device_name?: string | null;
         };
+        /** LowStockResource */
+        LowStockResource: {
+            id: number;
+            product_id: number;
+            location_id: number;
+            quantity: number;
+            on_hand_quantity: number;
+            shortage: number;
+            product?: components["schemas"]["ProductResource"];
+            location?: components["schemas"]["LocationResource"];
+        };
         /** MeResource */
         MeResource: {
             user: components["schemas"]["UserResource"];
@@ -614,6 +679,18 @@ export interface components {
             product_id: number;
             quantity: number;
             kind: string;
+        };
+        /** ReorderPointResource */
+        ReorderPointResource: {
+            id: number;
+            tenant_id: number;
+            product_id: number;
+            location_id: number;
+            quantity: number;
+            product?: components["schemas"]["ProductResource"];
+            location?: components["schemas"]["LocationResource"];
+            created_at: string | null;
+            updated_at: string | null;
         };
         /** ResetPasswordData */
         ResetPasswordData: {
@@ -646,6 +723,12 @@ export interface components {
             name: string;
             unit: string;
             is_active: boolean;
+        };
+        /** StoreReorderPointData */
+        StoreReorderPointData: {
+            product_id: number;
+            location_id: number;
+            quantity: number;
         };
         /** StoreWarehouseData */
         StoreWarehouseData: {
@@ -688,6 +771,11 @@ export interface components {
             unit?: string;
             is_active?: boolean;
             product_id: number;
+        };
+        /** UpdateReorderPointData */
+        UpdateReorderPointData: {
+            quantity: number;
+            reorder_point_id: number;
         };
         /** UpdateTenantData */
         UpdateTenantData: {
@@ -794,11 +882,10 @@ export interface operations {
         responses: {
             200: {
                 headers: {
-                    "Transfer-Encoding": "chunked";
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/csv; charset=UTF-8": string;
+                    "application/json": Record<string, never>;
                 };
             };
             401: components["responses"]["AuthenticationException"];
@@ -823,11 +910,10 @@ export interface operations {
         responses: {
             200: {
                 headers: {
-                    "Transfer-Encoding": "chunked";
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/csv; charset=UTF-8": string;
+                    "application/json": Record<string, never>;
                 };
             };
             401: components["responses"]["AuthenticationException"];
@@ -1316,6 +1402,59 @@ export interface operations {
             401: components["responses"]["AuthenticationException"];
         };
     };
+    "inventory.lowStock": {
+        parameters: {
+            query?: {
+                "filter[product_id]"?: string;
+                "filter[location_id]"?: string;
+                sort?: ("id" | "-id" | "quantity" | "-quantity")[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paginated set of `LowStockResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["LowStockResource"][];
+                        links: {
+                            first: string | null;
+                            last: string | null;
+                            prev: string | null;
+                            next: string | null;
+                        };
+                        meta: {
+                            current_page: number;
+                            from: number | null;
+                            last_page: number;
+                            /** @description Generated paginator links. */
+                            links: {
+                                url: string | null;
+                                label: string;
+                                active: boolean;
+                            }[];
+                            /** @description Base path for paginator generated URLs. */
+                            path: string | null;
+                            /** @description Number of items shown per page. */
+                            per_page: number;
+                            /** @description Number of the last item in the slice. */
+                            to: number | null;
+                            /** @description Total number of items being paginated. */
+                            total: number;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+        };
+    };
     "auth.me": {
         parameters: {
             query?: never;
@@ -1493,6 +1632,175 @@ export interface operations {
             path: {
                 /** @description The product ID */
                 product: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            404: components["responses"]["ModelNotFoundException"];
+        };
+    };
+    "reorder-points.index": {
+        parameters: {
+            query?: {
+                "filter[product_id]"?: string;
+                "filter[location_id]"?: string;
+                sort?: ("id" | "-id" | "quantity" | "-quantity" | "created_at" | "-created_at")[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paginated set of `ReorderPointResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ReorderPointResource"][];
+                        links: {
+                            first: string | null;
+                            last: string | null;
+                            prev: string | null;
+                            next: string | null;
+                        };
+                        meta: {
+                            current_page: number;
+                            from: number | null;
+                            last_page: number;
+                            /** @description Generated paginator links. */
+                            links: {
+                                url: string | null;
+                                label: string;
+                                active: boolean;
+                            }[];
+                            /** @description Base path for paginator generated URLs. */
+                            path: string | null;
+                            /** @description Number of items shown per page. */
+                            per_page: number;
+                            /** @description Number of the last item in the slice. */
+                            to: number | null;
+                            /** @description Total number of items being paginated. */
+                            total: number;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+        };
+    };
+    "reorder-points.store": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description `StoreReorderPointData` */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StoreReorderPointData"];
+            };
+        };
+        responses: {
+            /** @description `ReorderPointResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ReorderPointResource"];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "reorder-points.show": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The reorder point ID */
+                reorderPoint: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description `ReorderPointResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ReorderPointResource"];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            404: components["responses"]["ModelNotFoundException"];
+        };
+    };
+    "reorder-points.update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The reorder point ID */
+                reorderPoint: number;
+            };
+            cookie?: never;
+        };
+        /** @description `UpdateReorderPointData` */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateReorderPointData"];
+            };
+        };
+        responses: {
+            /** @description `ReorderPointResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ReorderPointResource"];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            404: components["responses"]["ModelNotFoundException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "reorder-points.destroy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The reorder point ID */
+                reorderPoint: number;
             };
             cookie?: never;
         };

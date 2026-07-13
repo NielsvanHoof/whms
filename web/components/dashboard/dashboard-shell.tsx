@@ -122,6 +122,16 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 				pathname === "/inventory/movements" ||
 				pathname.startsWith("/inventory/movements/"),
 		},
+		{
+			href: "/inventory/low-stock",
+			label: "Low stock",
+			active: pathname === "/inventory/low-stock",
+		},
+		{
+			href: "/inventory/reorder-points",
+			label: "Reorder points",
+			active: pathname.startsWith("/inventory/reorder-points"),
+		},
 	];
 
 	// Flat list for the mobile menu dropdown.

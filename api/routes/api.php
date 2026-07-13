@@ -14,10 +14,12 @@ use App\Http\Controllers\Auth\MeController;
 use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\Inventory\ExportInventoryBalancesController;
 use App\Http\Controllers\Inventory\ExportInventoryMovementsController;
+use App\Http\Controllers\Inventory\LowStockController;
 use App\Http\Controllers\InventoryBalanceController;
 use App\Http\Controllers\InventoryMovementController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ReorderPointController;
 use App\Http\Controllers\RoleManagementController;
 use App\Http\Controllers\Tenant\UpdateTenantController;
 use App\Http\Controllers\WarehouseController;
@@ -76,6 +78,9 @@ Route::prefix('v1')->group(function (): void {
         Route::get('inventory-movements', [InventoryMovementController::class, 'index']);
         Route::get('inventory-movements/{inventory_movement}', [InventoryMovementController::class, 'show']);
         Route::post('inventory-movements', [InventoryMovementController::class, 'store']);
+
+        Route::get('reorder-points/low-stock', LowStockController::class);
+        Route::apiResource('reorder-points', ReorderPointController::class);
 
         Route::prefix('access')->group(function (): void {
             Route::get('roles', [RoleManagementController::class, 'roles']);
