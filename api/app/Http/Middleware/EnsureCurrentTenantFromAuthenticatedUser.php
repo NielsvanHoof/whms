@@ -7,7 +7,6 @@ namespace App\Http\Middleware;
 use App\Models\Tenant;
 use Closure;
 use Illuminate\Http\Request;
-use Spatie\Multitenancy\Multitenancy;
 use Symfony\Component\HttpFoundation\Response;
 
 /**

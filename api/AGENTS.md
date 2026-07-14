@@ -18,6 +18,7 @@ This application is a Laravel application and its main Laravel ecosystems packag
 - laravel/boost (BOOST) - v2
 - laravel/pail (PAIL) - v1
 - laravel/pint (PINT) - v1
+- laravel/telescope (TELESCOPE) - v5
 - pestphp/pest (PEST) - v5
 - phpunit/phpunit (PHPUNIT) - v13
 
