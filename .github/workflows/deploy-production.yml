@@ -53,6 +53,7 @@ jobs:
           tags: ${{ steps.ecr.outputs.registry }}/${{ vars.ECR_API_REPOSITORY }}:${{ github.sha }}
           secrets: |
             composer_auth=${{ secrets.COMPOSER_AUTH }}
+            composer_github_token=${{ secrets.COMPOSER_GITHUB_TOKEN }}
 
       - name: Build and push web image
         id: web_image

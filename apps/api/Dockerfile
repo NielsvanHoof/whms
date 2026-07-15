@@ -26,8 +26,8 @@ COPY resources ./resources
 RUN npm run build
 
 # -----------------------------------------------------------------------------
-# Composer dependencies (production, no dev). Secret `composer_auth`: COMPOSER_AUTH JSON
-# (satis.dedoc.co http-basic and usually github.com oauth for scramble-pro).
+# Composer dependencies (production, no dev). Secret `composer_auth`: COMPOSER_AUTH JSON.
+# The optional `composer_github_token` secret supports Composer's GitHub fallback for private packages.
 # -----------------------------------------------------------------------------
 FROM php:8.4-cli-bookworm AS vendor
 
@@ -56,7 +56,11 @@ COPY . .
 
 # Install without Composer scripts: artisan is not usable until vendor exists; discovery runs at container start.
 RUN --mount=type=secret,id=composer_auth \
-    COMPOSER_AUTH="$(cat /run/secrets/composer_auth)" \
+    --mount=type=secret,id=composer_github_token \
+    export COMPOSER_AUTH="$(cat /run/secrets/composer_auth)"; \
+    if [ -s /run/secrets/composer_github_token ]; then \
+        composer config --global github-oauth.github.com "$(cat /run/secrets/composer_github_token)"; \
+    fi; \
     composer install \
         --no-dev \
         --no-interaction \

@@ -99,3 +99,4 @@ jobs:
           push: false
           secrets: |
             composer_auth=${{ secrets.COMPOSER_AUTH }}
+            composer_github_token=${{ secrets.COMPOSER_GITHUB_TOKEN }}
