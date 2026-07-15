@@ -3,11 +3,11 @@ name: Web CI
 on:
   push:
     paths:
-      - 'web/**'
+      - 'apps/web/**'
       - '.github/workflows/web-ci.yml'
   pull_request:
     paths:
-      - 'web/**'
+      - 'apps/web/**'
       - '.github/workflows/web-ci.yml'
 
 concurrency:
@@ -19,7 +19,7 @@ permissions:
 
 defaults:
   run:
-    working-directory: web
+    working-directory: apps/web
 
 jobs:
   quality:
@@ -36,15 +36,15 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-          cache-dependency-path: web/package-lock.json
+          cache-dependency-path: apps/web/package-lock.json
 
       - name: Restore Next.js build cache
         uses: actions/cache@v6
         with:
-          path: web/.next/cache
-          key: ${{ runner.os }}-nextjs-${{ hashFiles('web/package-lock.json') }}-${{ hashFiles('web/**/*.js', 'web/**/*.jsx', 'web/**/*.ts', 'web/**/*.tsx') }}
+          path: apps/web/.next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('apps/web/package-lock.json') }}-${{ hashFiles('apps/web/**/*.js', 'apps/web/**/*.jsx', 'apps/web/**/*.ts', 'apps/web/**/*.tsx') }}
           restore-keys: |
-            ${{ runner.os }}-nextjs-${{ hashFiles('web/package-lock.json') }}-
+            ${{ runner.os }}-nextjs-${{ hashFiles('apps/web/package-lock.json') }}-
 
       - name: Install dependencies
         run: npm ci

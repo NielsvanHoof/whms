@@ -14,11 +14,11 @@ name: API CI
 on:
   push:
     paths:
-      - 'api/**'
+      - 'apps/api/**'
       - '.github/workflows/api-ci.yml'
   pull_request:
     paths:
-      - 'api/**'
+      - 'apps/api/**'
       - '.github/workflows/api-ci.yml'
 
 concurrency:
@@ -30,7 +30,7 @@ permissions:
 
 defaults:
   run:
-    working-directory: api
+    working-directory: apps/api
 
 jobs:
   quality:
@@ -56,7 +56,7 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ${{ steps.composer-cache.outputs.dir }}
-          key: ${{ runner.os }}-composer-v2-${{ hashFiles('api/composer.lock') }}
+          key: ${{ runner.os }}-composer-v2-${{ hashFiles('apps/api/composer.lock') }}
           restore-keys: |
             ${{ runner.os }}-composer-v2-
             ${{ runner.os }}-composer-
