@@ -60,3 +60,23 @@ jobs:
           # Client bundle; placeholder is enough for compile-time checks in CI.
           NEXT_PUBLIC_API_URL: http://127.0.0.1:8000
         run: npm run build
+
+  image:
+    needs: quality
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build production image
+        uses: docker/build-push-action@v7
+        with:
+          context: apps/web
+          file: apps/web/Dockerfile
+          push: false
+          build-args: |
+            NEXT_PUBLIC_API_URL=

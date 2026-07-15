@@ -1,0 +1,135 @@
+name: Deploy production
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    name: Build, migrate, and deploy
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
+      ECS_API_SERVICE: ${{ vars.ECS_API_SERVICE }}
+      ECS_WEB_SERVICE: ${{ vars.ECS_WEB_SERVICE }}
+      ECS_WORKER_SERVICE: ${{ vars.ECS_WORKER_SERVICE }}
+      ECR_API_REPOSITORY: ${{ vars.ECR_API_REPOSITORY }}
+      ECR_WEB_REPOSITORY: ${{ vars.ECR_WEB_REPOSITORY }}
+      IMAGE_TAG: ${{ github.sha }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+
+      - name: Log in to Amazon ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push API image
+        id: api_image
+        uses: docker/build-push-action@v7
+        with:
+          context: apps/api
+          file: apps/api/Dockerfile
+          push: true
+          tags: ${{ steps.ecr.outputs.registry }}/${{ vars.ECR_API_REPOSITORY }}:${{ github.sha }}
+          secrets: |
+            composer_auth=${{ secrets.COMPOSER_AUTH }}
+
+      - name: Build and push web image
+        id: web_image
+        uses: docker/build-push-action@v7
+        with:
+          context: apps/web
+          file: apps/web/Dockerfile
+          push: true
+          tags: ${{ steps.ecr.outputs.registry }}/${{ vars.ECR_WEB_REPOSITORY }}:${{ github.sha }}
+          build-args: |
+            NEXT_PUBLIC_API_URL=
+
+      - name: Register task definitions, migrate, and deploy
+        env:
+          API_IMAGE: ${{ steps.ecr.outputs.registry }}/${{ vars.ECR_API_REPOSITORY }}@${{ steps.api_image.outputs.digest }}
+          WEB_IMAGE: ${{ steps.ecr.outputs.registry }}/${{ vars.ECR_WEB_REPOSITORY }}@${{ steps.web_image.outputs.digest }}
+        run: |
+          set -euo pipefail
+
+          register_task_definition() {
+            local source_task_definition="$1"
+            local container_name="$2"
+            local image="$3"
+            local output_file="$4"
+
+            aws ecs describe-task-definition --task-definition "$source_task_definition" --query taskDefinition --output json \
+              | jq --arg container_name "$container_name" --arg image "$image" '
+                del(
+                  .taskDefinitionArn,
+                  .revision,
+                  .status,
+                  .requiresAttributes,
+                  .compatibilities,
+                  .registeredAt,
+                  .registeredBy
+                )
+                | .containerDefinitions |= map(
+                  if .name == $container_name then .image = $image else . end
+                )
+              ' > "$output_file"
+
+            aws ecs register-task-definition --cli-input-json "file://${output_file}" --query taskDefinition.taskDefinitionArn --output text
+          }
+
+          api_previous_task_definition="$(aws ecs describe-services --cluster "$ECS_CLUSTER" --services "$ECS_API_SERVICE" --query 'services[0].taskDefinition' --output text)"
+          web_previous_task_definition="$(aws ecs describe-services --cluster "$ECS_CLUSTER" --services "$ECS_WEB_SERVICE" --query 'services[0].taskDefinition' --output text)"
+          worker_previous_task_definition="$(aws ecs describe-services --cluster "$ECS_CLUSTER" --services "$ECS_WORKER_SERVICE" --query 'services[0].taskDefinition' --output text)"
+
+          api_task_definition="$(register_task_definition "$api_previous_task_definition" api "$API_IMAGE" api-task-definition.json)"
+          web_task_definition="$(register_task_definition "$web_previous_task_definition" web "$WEB_IMAGE" web-task-definition.json)"
+          worker_task_definition="$(register_task_definition "$worker_previous_task_definition" worker "$API_IMAGE" worker-task-definition.json)"
+
+          network_configuration="$(aws ecs describe-services --cluster "$ECS_CLUSTER" --services "$ECS_API_SERVICE" --query 'services[0].networkConfiguration.awsvpcConfiguration' --output json)"
+          migration_task_arn="$(aws ecs run-task \
+            --cluster "$ECS_CLUSTER" \
+            --launch-type FARGATE \
+            --task-definition "$api_task_definition" \
+            --network-configuration "{\"awsvpcConfiguration\":${network_configuration}}" \
+            --overrides '{"containerOverrides":[{"name":"api","command":["php","artisan","migrate","--force","--no-interaction"]}]}' \
+            --query 'tasks[0].taskArn' \
+            --output text)"
+
+          test "$migration_task_arn" != "None"
+          aws ecs wait tasks-stopped --cluster "$ECS_CLUSTER" --tasks "$migration_task_arn"
+          migration_exit_code="$(aws ecs describe-tasks --cluster "$ECS_CLUSTER" --tasks "$migration_task_arn" --query 'tasks[0].containers[?name==`api`].exitCode | [0]' --output text)"
+          test "$migration_exit_code" = "0"
+
+          rollback() {
+            aws ecs update-service --cluster "$ECS_CLUSTER" --service "$ECS_API_SERVICE" --task-definition "$api_previous_task_definition" --force-new-deployment >/dev/null
+            aws ecs update-service --cluster "$ECS_CLUSTER" --service "$ECS_WEB_SERVICE" --task-definition "$web_previous_task_definition" --force-new-deployment >/dev/null
+            aws ecs update-service --cluster "$ECS_CLUSTER" --service "$ECS_WORKER_SERVICE" --task-definition "$worker_previous_task_definition" --force-new-deployment >/dev/null
+          }
+
+          if ! aws ecs update-service --cluster "$ECS_CLUSTER" --service "$ECS_API_SERVICE" --task-definition "$api_task_definition" --force-new-deployment >/dev/null \
+            || ! aws ecs update-service --cluster "$ECS_CLUSTER" --service "$ECS_WEB_SERVICE" --task-definition "$web_task_definition" --force-new-deployment >/dev/null \
+            || ! aws ecs update-service --cluster "$ECS_CLUSTER" --service "$ECS_WORKER_SERVICE" --task-definition "$worker_task_definition" --force-new-deployment >/dev/null \
+            || ! aws ecs wait services-stable --cluster "$ECS_CLUSTER" --services "$ECS_API_SERVICE" "$ECS_WEB_SERVICE" "$ECS_WORKER_SERVICE"; then
+            rollback
+            exit 1
+          fi

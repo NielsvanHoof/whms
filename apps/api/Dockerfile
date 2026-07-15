@@ -10,14 +10,14 @@
 #   docker buildx build -f api/Dockerfile --secret id=composer_auth,src=$HOME/.config/composer/auth.json -t warehouse-api:local api
 
 # -----------------------------------------------------------------------------
-# Front-end build (Vite). No package-lock.json in repo: npm install resolves deps.
+# Front-end build (Vite).
 # -----------------------------------------------------------------------------
 FROM node:22-bookworm-slim AS assets
 
 WORKDIR /app
 
-COPY package.json ./
-RUN npm install --ignore-scripts
+COPY package.json package-lock.json ./
+RUN npm ci --ignore-scripts
 
 COPY vite.config.js ./
 COPY public ./public
@@ -38,9 +38,13 @@ RUN apt-get update \
         git \
         unzip \
         zip \
+        libfreetype6-dev \
+        libjpeg62-turbo-dev \
+        libpng-dev \
         libzip-dev \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-configure zip \
-    && docker-php-ext-install -j"$(nproc)" zip \
+    && docker-php-ext-install -j"$(nproc)" gd zip \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -71,22 +75,25 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         nginx \
         supervisor \
+        libfreetype6-dev \
         libicu-dev \
+        libjpeg62-turbo-dev \
         libpng-dev \
         libzip-dev \
         libonig-dev \
         libxml2-dev \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-configure intl \
     && docker-php-ext-configure zip \
-    && docker-php-ext-install -j"$(nproc)" \
+    && docker-php-ext-install -j2 \
         intl \
         opcache \
         pcntl \
         pdo_mysql \
-        pdo_sqlite \
         mbstring \
         exif \
         bcmath \
+        gd \
         zip \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*

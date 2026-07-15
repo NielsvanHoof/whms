@@ -9,4 +9,8 @@ if [ -n "${APP_KEY}" ]; then
     su www-data -s /bin/sh -c "cd /var/www/html && php artisan package:discover --ansi" || true
 fi
 
+if [ "$#" -gt 0 ]; then
+    exec "$@"
+fi
+
 exec /usr/bin/supervisord -c /etc/supervisor/supervisord.conf
